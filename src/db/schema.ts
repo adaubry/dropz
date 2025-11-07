@@ -119,74 +119,6 @@ export const drops = pgTable(
 export type Drop = typeof drops.$inferSelect;
 
 // ============================================
-// RELATIONS
-// ============================================
-
-export const planetsRelations = relations(planets, ({ many }) => ({
-  oceans: many(oceans),
-  nodes: many(nodes), // New unified nodes system
-}));
-
-export const oceansRelations = relations(oceans, ({ one, many }) => ({
-  planet: one(planets, {
-    fields: [oceans.planet_id],
-    references: [planets.id],
-  }),
-  seas: many(seas),
-}));
-
-export const seasRelations = relations(
-  seas,
-  ({ one, many }) => ({
-    ocean: one(oceans, {
-      fields: [seas.ocean_slug],
-      references: [oceans.slug],
-    }),
-    rivers: many(rivers),
-  }),
-);
-
-export const riversRelations = relations(
-  rivers,
-  ({ one, many }) => ({
-    sea: one(seas, {
-      fields: [rivers.sea_id],
-      references: [seas.id],
-    }),
-    drops: many(drops),
-  }),
-);
-
-export const dropsRelations = relations(drops, ({ one }) => ({
-  river: one(rivers, {
-    fields: [drops.river_slug],
-    references: [rivers.slug],
-  }),
-}));
-
-export const nodesRelations = relations(nodes, ({ one, many }) => ({
-  planet: one(planets, {
-    fields: [nodes.planet_id],
-    references: [planets.id],
-  }),
-  linksFrom: many(nodeLinks, { relationName: "from" }),
-  linksTo: many(nodeLinks, { relationName: "to" }),
-}));
-
-export const nodeLinksRelations = relations(nodeLinks, ({ one }) => ({
-  fromNode: one(nodes, {
-    fields: [nodeLinks.from_node_id],
-    references: [nodes.id],
-    relationName: "from",
-  }),
-  toNode: one(nodes, {
-    fields: [nodeLinks.to_node_id],
-    references: [nodes.id],
-    relationName: "to",
-  }),
-}));
-
-// ============================================
 // NEW UNIFIED NODES SYSTEM (Migration Roadmap 1.1)
 // ============================================
 
@@ -334,3 +266,71 @@ export const users = pgTable("users", {
 
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
+
+// ============================================
+// RELATIONS
+// ============================================
+
+export const planetsRelations = relations(planets, ({ many }) => ({
+  oceans: many(oceans),
+  nodes: many(nodes), // New unified nodes system
+}));
+
+export const oceansRelations = relations(oceans, ({ one, many }) => ({
+  planet: one(planets, {
+    fields: [oceans.planet_id],
+    references: [planets.id],
+  }),
+  seas: many(seas),
+}));
+
+export const seasRelations = relations(
+  seas,
+  ({ one, many }) => ({
+    ocean: one(oceans, {
+      fields: [seas.ocean_slug],
+      references: [oceans.slug],
+    }),
+    rivers: many(rivers),
+  }),
+);
+
+export const riversRelations = relations(
+  rivers,
+  ({ one, many }) => ({
+    sea: one(seas, {
+      fields: [rivers.sea_id],
+      references: [seas.id],
+    }),
+    drops: many(drops),
+  }),
+);
+
+export const dropsRelations = relations(drops, ({ one }) => ({
+  river: one(rivers, {
+    fields: [drops.river_slug],
+    references: [rivers.slug],
+  }),
+}));
+
+export const nodesRelations = relations(nodes, ({ one, many }) => ({
+  planet: one(planets, {
+    fields: [nodes.planet_id],
+    references: [planets.id],
+  }),
+  linksFrom: many(nodeLinks, { relationName: "from" }),
+  linksTo: many(nodeLinks, { relationName: "to" }),
+}));
+
+export const nodeLinksRelations = relations(nodeLinks, ({ one }) => ({
+  fromNode: one(nodes, {
+    fields: [nodeLinks.from_node_id],
+    references: [nodes.id],
+    relationName: "from",
+  }),
+  toNode: one(nodes, {
+    fields: [nodeLinks.to_node_id],
+    references: [nodes.id],
+    relationName: "to",
+  }),
+}));
