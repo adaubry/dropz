@@ -3,7 +3,7 @@ import { getPlanets } from "@/lib/queries";
 
 import Image from "next/image";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export default async function Home() {
   const [planets] = await Promise.all([getPlanets()]);

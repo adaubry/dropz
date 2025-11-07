@@ -1,34 +1,11 @@
 import { ProductLink } from "@/components/ui/product-card";
 import Image from "next/image";
 import { notFound } from "next/navigation";
-import { AddToCartForm } from "@/components/add-to-cart-form";
 import { Metadata } from "next";
 
 import { getDropDetails, getDropsForRiver } from "@/lib/queries";
-// import { db } from "@/db";
 
-export const dynamic = "force-dynamic";
-
-// export async function generateStaticParams() {
-//   const results = await db.query.drops.findMany({
-//     with: {
-//       river: {
-//         with: {
-//           sea: {
-//             with: {
-//               ocean: true,
-//             },
-//           },
-//         },
-//       },
-//     },
-//   });
-//   return results.map((s) => ({
-//     ocean: s.river.sea.ocean.slug,
-//     river: s.river.slug,
-//     drop: s.slug,
-//   }));
-// }
+export const revalidate = 0;
 
 export async function generateMetadata(props: {
   params: Promise<{ drop: string; ocean: string; river: string }>;
@@ -74,48 +51,66 @@ export default async function Page(props: {
   ];
 
   return (
-    <div className="container p-4">
-      <h1 className="border-t-2 pt-1 text-xl font-bold text-accent1">
-        {dropData.name}
-      </h1>
-      <div className="flex flex-col gap-2">
-        <div className="flex flex-row gap-2">
+    <div className="container p-4 max-w-4xl mx-auto">
+      {/* Breadcrumb navigation */}
+      <nav className="text-sm mb-4 text-gray-600">
+        <span>🌍 Planet</span>
+        {" / "}
+        <a href={`/drops/${ocean}`} className="hover:underline">
+          {ocean}
+        </a>
+        {" / "}
+        <span>{river}</span>
+        {" / "}
+        <span className="font-semibold">{drop}</span>
+      </nav>
+
+      {/* Main content */}
+      <article>
+        <h1 className="text-3xl font-bold mb-4">{dropData.name}</h1>
+
+        {dropData.image_url && (
           <Image
             loading="eager"
             decoding="sync"
-            src={dropData.image_url ?? "/placeholder.svg?height=64&width=64"}
-            alt={`A small picture of ${dropData.name}`}
-            height={256}
+            src={dropData.image_url}
+            alt={`Cover image for ${dropData.name}`}
+            width={800}
+            height={400}
             quality={80}
-            width={256}
-            className="h-56 w-56 flex-shrink-0 border-2 md:h-64 md:w-64"
+            className="w-full h-64 object-cover rounded-lg mb-6"
           />
-          <p className="flex-grow text-base">{dropData.description}</p>
-        </div>
-        <p className="text-xl font-bold">
-          ${parseFloat(dropData.price).toFixed(2)}
-        </p>
-        <AddToCartForm dropSlug={dropData.slug} />
-      </div>
-      <div className="pt-8">
-        {related.length > 0 && (
-          <h2 className="text-lg font-bold text-accent1">
-            Explore more drops
-          </h2>
         )}
-        <div className="flex flex-row flex-wrap gap-2">
-          {related?.map((drop) => (
-            <ProductLink
-              key={drop.name}
-              loading="lazy"
-              ocean_slug={ocean}
-              river_slug={river}
-              drop={drop}
-              imageUrl={drop.image_url}
-            />
-          ))}
+
+        {/* Test div for content rendering - markdown renderer goes here */}
+        <div className="prose prose-lg max-w-none mb-8">
+          <div className="bg-blue-50 border-l-4 border-blue-500 p-4 mb-4">
+            <p className="text-sm font-mono text-gray-700">
+              📄 Content Placeholder (Markdown Renderer Will Go Here)
+            </p>
+          </div>
+          <p className="text-gray-700">{dropData.description}</p>
         </div>
-      </div>
+      </article>
+
+      {/* Related content */}
+      {related.length > 0 && (
+        <aside className="mt-12">
+          <h2 className="text-xl font-bold mb-4">💧 Related Drops</h2>
+          <div className="grid grid-cols-2 gap-4">
+            {related.map((relatedDrop) => (
+              <ProductLink
+                key={relatedDrop.name}
+                loading="lazy"
+                ocean_slug={ocean}
+                river_slug={river}
+                drop={relatedDrop}
+                imageUrl={relatedDrop.image_url}
+              />
+            ))}
+          </div>
+        </aside>
+      )}
     </div>
   );
 }

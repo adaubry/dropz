@@ -5,7 +5,7 @@ import { getPlanetDetails } from "@/lib/queries";
 
 import Image from "next/image";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 // export async function generateStaticParams() {
 //   return await db.select({ planet: planets.slug }).from(planets);

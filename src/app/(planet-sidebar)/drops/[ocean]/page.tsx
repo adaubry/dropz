@@ -5,7 +5,7 @@ import { getOcean, getOceanDropCount } from "@/lib/queries";
 import { db } from "@/db";
 import { oceans } from "@/db/schema";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 // export async function generateStaticParams() {
 //   return await db.select({ ocean: oceans.slug }).from(oceans);

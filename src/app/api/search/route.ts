@@ -1,8 +1,6 @@
 import { getSearchResults } from "@/lib/queries";
 import { NextRequest } from "next/server";
 
-export const dynamic = "force-dynamic";
-
 export async function GET(request: NextRequest) {
   // format is /api/search?q=term
   const searchTerm = request.nextUrl.searchParams.get("q");

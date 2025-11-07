@@ -1,7 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  output: 'standalone',
   experimental: {
-    ppr: true,
+    ppr: false,
     inlineCss: true,
     reactCompiler: true,
   },

@@ -8,7 +8,7 @@ import {
 } from "@/lib/queries";
 // import { db } from "@/db";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 // export async function generateStaticParams() {
 //   const results = await db.query.rivers.findMany({
