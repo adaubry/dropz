@@ -59,6 +59,7 @@
     "@types/node": "^20.16.12",
     "@types/react": "npm:types-react@19.0.0-rc.1",
     "@types/react-dom": "npm:types-react-dom@19.0.0-rc.1",
+    "drizzle-kit": "^0.31.6",
     "drizzle-kit": "^0.31.5",
     "eslint": "^8.57.1",
     "eslint-config-next": "15.0.0-rc.1",
