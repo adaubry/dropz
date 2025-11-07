@@ -7,6 +7,8 @@ import { Metadata } from "next";
 import { getDropDetails, getDropsForRiver } from "@/lib/queries";
 // import { db } from "@/db";
 
+export const dynamic = "force-dynamic";
+
 // export async function generateStaticParams() {
 //   const results = await db.query.drops.findMany({
 //     with: {

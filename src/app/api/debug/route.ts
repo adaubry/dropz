@@ -1,5 +1,7 @@
 import { cookies } from "next/headers";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(request: Request) {
   // dump all the request headers, cookies, and body, infinite deep json stringify
   const stringifyHeaders = JSON.stringify(

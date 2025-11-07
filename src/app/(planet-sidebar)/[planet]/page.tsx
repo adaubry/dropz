@@ -5,9 +5,11 @@ import { getPlanetDetails } from "@/lib/queries";
 
 import Image from "next/image";
 
-export async function generateStaticParams() {
-  return await db.select({ planet: planets.slug }).from(planets);
-}
+export const dynamic = "force-dynamic";
+
+// export async function generateStaticParams() {
+//   return await db.select({ planet: planets.slug }).from(planets);
+// }
 
 export default async function Home(props: {
   params: Promise<{

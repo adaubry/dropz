@@ -5,9 +5,11 @@ import { getOcean, getOceanDropCount } from "@/lib/queries";
 import { db } from "@/db";
 import { oceans } from "@/db/schema";
 
-export async function generateStaticParams() {
-  return await db.select({ ocean: oceans.slug }).from(oceans);
-}
+export const dynamic = "force-dynamic";
+
+// export async function generateStaticParams() {
+//   return await db.select({ ocean: oceans.slug }).from(oceans);
+// }
 
 export default async function Page(props: {
   params: Promise<{

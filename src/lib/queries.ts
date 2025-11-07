@@ -227,3 +227,15 @@ export const getSearchResults = unstable_cache(
   ["search-results"],
   { revalidate: 60 * 60 * 2 }, // two hours
 );
+
+// Backward compatibility exports
+export const getCollections = getPlanets;
+
+export const getProductCount = unstable_cache(
+  () =>
+    db.select({ count: count() }).from(drops),
+  ["product-count"],
+  {
+    revalidate: 60 * 60 * 2, // two hours
+  }
+);
