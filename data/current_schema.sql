@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict jpryX0Jm4XGLyJw6cP3HXeNNm3fnXxHTwLayXLHmcdfWAuHd2BGDl8bYpAceK9I
+\restrict XF5kkaaMkk6FmCjYV2jUn3NIrJg8hUU5G7Mp09gzWMh5ZaWmt0NfIZXGawXhgh8
 
 -- Dumped from database version 17.5 (6bc9ef8)
 -- Dumped by pg_dump version 17.6 (Ubuntu 17.6-2.pgdg22.04+1)
@@ -81,7 +81,7 @@ CREATE TABLE public.drops (
     name text NOT NULL,
     description text NOT NULL,
     price numeric NOT NULL,
-    subcategory_slug text NOT NULL,
+    river_slug text NOT NULL,
     image_url text
 );
 
@@ -93,9 +93,10 @@ ALTER TABLE public.drops OWNER TO neondb_owner;
 --
 
 CREATE TABLE public.oceans (
-    id integer NOT NULL,
+    slug text NOT NULL,
     name text NOT NULL,
-    ocean_slug text NOT NULL
+    planet_id integer NOT NULL,
+    image_url text
 );
 
 
@@ -108,7 +109,7 @@ ALTER TABLE public.oceans OWNER TO neondb_owner;
 CREATE TABLE public.rivers (
     slug text NOT NULL,
     name text NOT NULL,
-    river_id integer NOT NULL,
+    sea_id integer NOT NULL,
     image_url text
 );
 
@@ -120,10 +121,9 @@ ALTER TABLE public.rivers OWNER TO neondb_owner;
 --
 
 CREATE TABLE public.seas (
-    slug text NOT NULL,
+    id integer NOT NULL,
     name text NOT NULL,
-    planet_id integer NOT NULL,
-    image_url text
+    ocean_slug text NOT NULL
 );
 
 
@@ -148,7 +148,7 @@ ALTER SEQUENCE public.subcollections_id_seq OWNER TO neondb_owner;
 -- Name: subcollections_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: neondb_owner
 --
 
-ALTER SEQUENCE public.subcollections_id_seq OWNED BY public.oceans.id;
+ALTER SEQUENCE public.subcollections_id_seq OWNED BY public.seas.id;
 
 
 --
@@ -189,17 +189,17 @@ ALTER SEQUENCE public.users_id_seq OWNED BY public.users.id;
 
 
 --
--- Name: oceans id; Type: DEFAULT; Schema: public; Owner: neondb_owner
---
-
-ALTER TABLE ONLY public.oceans ALTER COLUMN id SET DEFAULT nextval('public.subcollections_id_seq'::regclass);
-
-
---
 -- Name: planets id; Type: DEFAULT; Schema: public; Owner: neondb_owner
 --
 
 ALTER TABLE ONLY public.planets ALTER COLUMN id SET DEFAULT nextval('public.collections_id_seq'::regclass);
+
+
+--
+-- Name: seas id; Type: DEFAULT; Schema: public; Owner: neondb_owner
+--
+
+ALTER TABLE ONLY public.seas ALTER COLUMN id SET DEFAULT nextval('public.subcollections_id_seq'::regclass);
 
 
 --
@@ -210,10 +210,10 @@ ALTER TABLE ONLY public.users ALTER COLUMN id SET DEFAULT nextval('public.users_
 
 
 --
--- Name: seas categories_pkey; Type: CONSTRAINT; Schema: public; Owner: neondb_owner
+-- Name: oceans categories_pkey; Type: CONSTRAINT; Schema: public; Owner: neondb_owner
 --
 
-ALTER TABLE ONLY public.seas
+ALTER TABLE ONLY public.oceans
     ADD CONSTRAINT categories_pkey PRIMARY KEY (slug);
 
 
@@ -242,10 +242,10 @@ ALTER TABLE ONLY public.rivers
 
 
 --
--- Name: oceans subcollections_pkey; Type: CONSTRAINT; Schema: public; Owner: neondb_owner
+-- Name: seas subcollections_pkey; Type: CONSTRAINT; Schema: public; Owner: neondb_owner
 --
 
-ALTER TABLE ONLY public.oceans
+ALTER TABLE ONLY public.seas
     ADD CONSTRAINT subcollections_pkey PRIMARY KEY (id);
 
 
@@ -269,7 +269,7 @@ ALTER TABLE ONLY public.users
 -- Name: categories_collection_id_idx; Type: INDEX; Schema: public; Owner: neondb_owner
 --
 
-CREATE INDEX categories_collection_id_idx ON public.seas USING btree (planet_id);
+CREATE INDEX categories_collection_id_idx ON public.oceans USING btree (planet_id);
 
 
 --
@@ -290,28 +290,28 @@ CREATE INDEX name_trgm_index ON public.drops USING gin (name public.gin_trgm_ops
 -- Name: products_subcategory_slug_idx; Type: INDEX; Schema: public; Owner: neondb_owner
 --
 
-CREATE INDEX products_subcategory_slug_idx ON public.drops USING btree (subcategory_slug);
+CREATE INDEX products_subcategory_slug_idx ON public.drops USING btree (river_slug);
 
 
 --
 -- Name: subcategories_subcollection_id_idx; Type: INDEX; Schema: public; Owner: neondb_owner
 --
 
-CREATE INDEX subcategories_subcollection_id_idx ON public.rivers USING btree (river_id);
+CREATE INDEX subcategories_subcollection_id_idx ON public.rivers USING btree (sea_id);
 
 
 --
 -- Name: subcollections_category_slug_idx; Type: INDEX; Schema: public; Owner: neondb_owner
 --
 
-CREATE INDEX subcollections_category_slug_idx ON public.oceans USING btree (ocean_slug);
+CREATE INDEX subcollections_category_slug_idx ON public.seas USING btree (ocean_slug);
 
 
 --
--- Name: seas categories_collection_id_collections_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: neondb_owner
+-- Name: oceans categories_collection_id_collections_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: neondb_owner
 --
 
-ALTER TABLE ONLY public.seas
+ALTER TABLE ONLY public.oceans
     ADD CONSTRAINT categories_collection_id_collections_id_fk FOREIGN KEY (planet_id) REFERENCES public.planets(id) ON DELETE CASCADE;
 
 
@@ -320,7 +320,7 @@ ALTER TABLE ONLY public.seas
 --
 
 ALTER TABLE ONLY public.drops
-    ADD CONSTRAINT products_subcategory_slug_subcategories_slug_fk FOREIGN KEY (subcategory_slug) REFERENCES public.rivers(slug) ON DELETE CASCADE;
+    ADD CONSTRAINT products_subcategory_slug_subcategories_slug_fk FOREIGN KEY (river_slug) REFERENCES public.rivers(slug) ON DELETE CASCADE;
 
 
 --
@@ -328,15 +328,15 @@ ALTER TABLE ONLY public.drops
 --
 
 ALTER TABLE ONLY public.rivers
-    ADD CONSTRAINT subcategories_subcollection_id_subcollections_id_fk FOREIGN KEY (river_id) REFERENCES public.oceans(id) ON DELETE CASCADE;
+    ADD CONSTRAINT subcategories_subcollection_id_subcollections_id_fk FOREIGN KEY (sea_id) REFERENCES public.seas(id) ON DELETE CASCADE;
 
 
 --
--- Name: oceans subcollections_category_slug_categories_slug_fk; Type: FK CONSTRAINT; Schema: public; Owner: neondb_owner
+-- Name: seas subcollections_category_slug_categories_slug_fk; Type: FK CONSTRAINT; Schema: public; Owner: neondb_owner
 --
 
-ALTER TABLE ONLY public.oceans
-    ADD CONSTRAINT subcollections_category_slug_categories_slug_fk FOREIGN KEY (ocean_slug) REFERENCES public.seas(slug) ON DELETE CASCADE;
+ALTER TABLE ONLY public.seas
+    ADD CONSTRAINT subcollections_category_slug_categories_slug_fk FOREIGN KEY (ocean_slug) REFERENCES public.oceans(slug) ON DELETE CASCADE;
 
 
 --
@@ -357,5 +357,5 @@ ALTER DEFAULT PRIVILEGES FOR ROLE cloud_admin IN SCHEMA public GRANT ALL ON TABL
 -- PostgreSQL database dump complete
 --
 
-\unrestrict jpryX0Jm4XGLyJw6cP3HXeNNm3fnXxHTwLayXLHmcdfWAuHd2BGDl8bYpAceK9I
+\unrestrict XF5kkaaMkk6FmCjYV2jUn3NIrJg8hUU5G7Mp09gzWMh5ZaWmt0NfIZXGawXhgh8
 
