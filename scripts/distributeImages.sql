@@ -55,7 +55,7 @@ JOIN numbered_image_urls niu
 WHERE o.slug = no.slug;
 
 
--- Update rivers with NULL image_url
+-- g rivers with NULL image_url
 WITH numbered_image_urls AS (
   SELECT image_url, ROW_NUMBER() OVER () AS rn
   FROM (

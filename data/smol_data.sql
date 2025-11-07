@@ -1,74 +1,415 @@
--- Seed data for dropz hierarchy system
--- Hierarchy: Planet > Ocean > Sea > River > Drop
+--
+-- PostgreSQL database dump
+--
 
--- Insert Planets
-INSERT INTO planets (id, name, slug) VALUES
-(1, 'Art Supplies', 'art-supplies'),
-(2, 'Office Equipment', 'office-equipment'),
-(3, 'Crafts & DIY', 'crafts-diy')
-ON CONFLICT (id) DO NOTHING;
+-- Dumped from database version 16.4
+-- Dumped by pg_dump version 16.4
 
--- Insert Oceans
-INSERT INTO oceans (slug, name, planet_id, image_url) VALUES
-('markers', 'Markers', 1, NULL),
-('pencils', 'Pencils', 1, NULL),
-('paints', 'Paints', 1, NULL),
-('pens', 'Pens', 2, NULL),
-('paper', 'Paper', 2, NULL),
-('glue', 'Glue', 3, NULL)
-ON CONFLICT (slug) DO NOTHING;
+SET statement_timeout = 0;
+SET lock_timeout = 0;
+SET idle_in_transaction_session_timeout = 0;
+SET client_encoding = 'UTF8';
+SET standard_conforming_strings = on;
+SELECT pg_catalog.set_config('search_path', '', false);
+SET check_function_bodies = false;
+SET xmloption = content;
+SET client_min_messages = warning;
+SET row_security = off;
 
--- Insert Seas
-INSERT INTO seas (id, name, ocean_slug) VALUES
-(1, 'Permanent Markers', 'markers'),
-(2, 'Dry Erase Markers', 'markers'),
-(3, 'Colored Pencils', 'pencils'),
-(4, 'Drawing Pencils', 'pencils'),
-(5, 'Acrylic Paints', 'paints'),
-(6, 'Watercolor Paints', 'paints'),
-(7, 'Ballpoint Pens', 'pens'),
-(8, 'Gel Pens', 'pens'),
-(9, 'Copy Paper', 'paper'),
-(10, 'Craft Paper', 'paper'),
-(11, 'Liquid Glue', 'glue'),
-(12, 'Glue Sticks', 'glue')
-ON CONFLICT (id) DO NOTHING;
+--
+-- Name: pg_trgm; Type: EXTENSION; Schema: -; Owner: -
+--
 
--- Insert Rivers
-INSERT INTO rivers (slug, name, sea_id, image_url) VALUES
-('sharpie-fine', 'Sharpie Fine Point', 1, NULL),
-('expo-classic', 'Expo Classic', 2, NULL),
-('prismacolor', 'Prismacolor Premier', 3, NULL),
-('staedtler-mars', 'Staedtler Mars Lumograph', 4, NULL),
-('liquitex-basics', 'Liquitex BASICS', 5, NULL),
-('winsor-newton', 'Winsor & Newton Cotman', 6, NULL),
-('bic-cristal', 'BIC Cristal', 7, NULL),
-('pilot-g2', 'Pilot G2', 8, NULL),
-('hp-copy', 'HP Copy & Print', 9, NULL),
-('astrobrights', 'Astrobrights', 10, NULL),
-('elmers-school', 'Elmer''s School Glue', 11, NULL),
-('elmers-stick', 'Elmer''s Glue Stick', 12, NULL)
-ON CONFLICT (slug) DO NOTHING;
+CREATE EXTENSION IF NOT EXISTS pg_trgm WITH SCHEMA public;
 
--- Insert Drops (sample products)
-INSERT INTO drops (slug, name, description, price, river_slug, image_url) VALUES
-('sharpie-black-12pk', 'Sharpie Fine Point Black 12-Pack', 'Classic black permanent markers with fine point tips', 15.99, 'sharpie-fine', NULL),
-('sharpie-assorted-24pk', 'Sharpie Fine Point Assorted 24-Pack', 'Vibrant assorted colors in permanent markers', 24.99, 'sharpie-fine', NULL),
-('expo-black-4pk', 'Expo Classic Black 4-Pack', 'Low-odor dry erase markers in black', 8.99, 'expo-classic', NULL),
-('expo-assorted-8pk', 'Expo Classic Assorted 8-Pack', 'Bright colors for whiteboards', 12.99, 'expo-classic', NULL),
-('prismacolor-48', 'Prismacolor Premier 48 Set', 'Professional quality colored pencils', 89.99, 'prismacolor', NULL),
-('prismacolor-72', 'Prismacolor Premier 72 Set', 'Extensive color range for artists', 129.99, 'prismacolor', NULL),
-('staedtler-6b-2b', 'Staedtler Mars Lumograph Drawing Set', 'Professional drawing pencils 6B-2B', 22.99, 'staedtler-mars', NULL),
-('liquitex-acrylic-set', 'Liquitex BASICS 48-Color Set', 'High-quality acrylic paints for all surfaces', 45.99, 'liquitex-basics', NULL),
-('winsor-watercolor-12', 'Winsor & Newton Cotman 12-Color Set', 'Student quality watercolors', 18.99, 'winsor-newton', NULL),
-('bic-blue-12pk', 'BIC Cristal Blue 12-Pack', 'Reliable ballpoint pens in blue', 4.99, 'bic-cristal', NULL),
-('pilot-g2-black-12pk', 'Pilot G2 Black 12-Pack', 'Smooth gel ink pens 0.7mm', 12.99, 'pilot-g2', NULL),
-('hp-copy-ream', 'HP Copy & Print Paper 500 Sheets', 'Bright white multipurpose paper', 8.99, 'hp-copy', NULL),
-('astrobrights-assorted', 'Astrobrights Assorted Colors 500 Sheets', 'Vibrant colored paper for projects', 14.99, 'astrobrights', NULL),
-('elmers-glue-4oz', 'Elmer''s School Glue 4oz', 'Washable white school glue', 2.99, 'elmers-school', NULL),
-('elmers-sticks-6pk', 'Elmer''s Glue Sticks 6-Pack', 'Disappearing purple glue sticks', 5.99, 'elmers-stick', NULL)
-ON CONFLICT (slug) DO NOTHING;
 
--- Reset sequences (adjust max values as needed)
-SELECT setval('planets_id_seq', (SELECT MAX(id) FROM planets));
-SELECT setval('seas_id_seq', (SELECT MAX(id) FROM seas));
+--
+-- Name: EXTENSION pg_trgm; Type: COMMENT; Schema: -; Owner: 
+--
+
+COMMENT ON EXTENSION pg_trgm IS 'text similarity measurement and index searching based on trigrams';
+
+
+SET default_tablespace = '';
+
+SET default_table_access_method = heap;
+
+--
+-- Name: categories; Type: TABLE; Schema: public; Owner: default
+--
+
+CREATE TABLE public.categories (
+    slug text NOT NULL,
+    name text NOT NULL,
+    collection_id integer NOT NULL,
+    image_url text
+);
+
+
+ALTER TABLE public.categories OWNER TO "default";
+
+--
+-- Name: collections; Type: TABLE; Schema: public; Owner: default
+--
+
+CREATE TABLE public.collections (
+    id integer NOT NULL,
+    name text NOT NULL,
+    slug text NOT NULL
+);
+
+
+ALTER TABLE public.collections OWNER TO "default";
+
+--
+-- Name: collections_id_seq; Type: SEQUENCE; Schema: public; Owner: default
+--
+
+CREATE SEQUENCE public.collections_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.collections_id_seq OWNER TO "default";
+
+--
+-- Name: collections_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: default
+--
+
+ALTER SEQUENCE public.collections_id_seq OWNED BY public.collections.id;
+
+
+--
+-- Name: products; Type: TABLE; Schema: public; Owner: default
+--
+
+CREATE TABLE public.products (
+    slug text NOT NULL,
+    name text NOT NULL,
+    description text NOT NULL,
+    price numeric NOT NULL,
+    subcategory_slug text NOT NULL,
+    image_url text
+);
+
+
+ALTER TABLE public.products OWNER TO "default";
+
+--
+-- Name: subcategories; Type: TABLE; Schema: public; Owner: default
+--
+
+CREATE TABLE public.subcategories (
+    slug text NOT NULL,
+    name text NOT NULL,
+    subcollection_id integer NOT NULL,
+    image_url text
+);
+
+
+ALTER TABLE public.subcategories OWNER TO "default";
+
+--
+-- Name: subcollections; Type: TABLE; Schema: public; Owner: default
+--
+
+CREATE TABLE public.subcollections (
+    id integer NOT NULL,
+    name text NOT NULL,
+    category_slug text NOT NULL
+);
+
+
+ALTER TABLE public.subcollections OWNER TO "default";
+
+--
+-- Name: subcollections_id_seq; Type: SEQUENCE; Schema: public; Owner: default
+--
+
+CREATE SEQUENCE public.subcollections_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.subcollections_id_seq OWNER TO "default";
+
+--
+-- Name: subcollections_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: default
+--
+
+ALTER SEQUENCE public.subcollections_id_seq OWNED BY public.subcollections.id;
+
+
+--
+-- Name: users; Type: TABLE; Schema: public; Owner: default
+--
+
+CREATE TABLE public.users (
+    id integer NOT NULL,
+    username character varying(100) NOT NULL,
+    password_hash text NOT NULL,
+    created_at timestamp without time zone DEFAULT now() NOT NULL,
+    updated_at timestamp without time zone DEFAULT now() NOT NULL
+);
+
+
+ALTER TABLE public.users OWNER TO "default";
+
+--
+-- Name: users_id_seq; Type: SEQUENCE; Schema: public; Owner: default
+--
+
+CREATE SEQUENCE public.users_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.users_id_seq OWNER TO "default";
+
+--
+-- Name: users_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: default
+--
+
+ALTER SEQUENCE public.users_id_seq OWNED BY public.users.id;
+
+
+--
+-- Name: collections id; Type: DEFAULT; Schema: public; Owner: default
+--
+
+ALTER TABLE ONLY public.collections ALTER COLUMN id SET DEFAULT nextval('public.collections_id_seq'::regclass);
+
+
+--
+-- Name: subcollections id; Type: DEFAULT; Schema: public; Owner: default
+--
+
+ALTER TABLE ONLY public.subcollections ALTER COLUMN id SET DEFAULT nextval('public.subcollections_id_seq'::regclass);
+
+
+--
+-- Name: users id; Type: DEFAULT; Schema: public; Owner: default
+--
+
+ALTER TABLE ONLY public.users ALTER COLUMN id SET DEFAULT nextval('public.users_id_seq'::regclass);
+
+
+--
+-- Data for Name: categories; Type: TABLE DATA; Schema: public; Owner: default
+--
+
+COPY public.categories (slug, name, collection_id, image_url) FROM stdin;
+erasers	Erasers	2	https://bevgyjm5apuichhj.public.blob.vercel-storage.com/categories/erasers-VTz6b5E0ZNe2V5Gs4JjvvRGMvsWmhm
+inking-pens	Inking Pens	6	https://bevgyjm5apuichhj.public.blob.vercel-storage.com/categories/inking-pens-HfWBdaqugXDFP9YtT4xdZV6xyhHPCn
+charcoal	Charcoal	2	https://bevgyjm5apuichhj.public.blob.vercel-storage.com/categories/charcoal-1G6b0Yk1b5Y2R3T0bX6X1b7g3bF4
+\.
+
+
+--
+-- Data for Name: subcollections; Type: TABLE DATA; Schema: public; Owner: default
+--
+
+COPY public.subcollections (id, name, category_slug) FROM stdin;
+\.
+
+
+--
+-- Data for Name: subcollections; Type: TABLE DATA; Schema: public; Owner: default
+--
+
+COPY public.subcollections (id, name, category_slug) FROM stdin;
+1	Sketching Pencils	graphite-pencils
+2	Graphite Pencil Sets	graphite-pencils
+3	Jumbo Graphite Pencils	graphite-pencils
+4	Waterproof Painting Aprons	painting-aprons
+5	Cotton Painting Aprons	painting-aprons
+6	Disposable Painting Aprons	painting-aprons
+7	Adjustable Painting Aprons	painting-aprons
+8	Full Coverage Painting Aprons	painting-aprons
+9	Pocketed Painting Aprons	painting-aprons
+10	Cobbler Painting Aprons	painting-aprons
+11	Sleeveless Painting Aprons	painting-aprons
+\.
+
+
+--
+-- Name: collections_id_seq; Type: SEQUENCE SET; Schema: public; Owner: default
+--
+
+SELECT pg_catalog.setval('public.collections_id_seq', 20, true);
+
+
+--
+-- Name: subcollections_id_seq; Type: SEQUENCE SET; Schema: public; Owner: default
+--
+
+SELECT pg_catalog.setval('public.subcollections_id_seq', 5821, true);
+
+
+--
+-- Name: users_id_seq; Type: SEQUENCE SET; Schema: public; Owner: default
+--
+
+SELECT pg_catalog.setval('public.users_id_seq', 276, true);
+
+
+--
+-- Name: categories categories_pkey; Type: CONSTRAINT; Schema: public; Owner: default
+--
+
+ALTER TABLE ONLY public.categories
+    ADD CONSTRAINT categories_pkey PRIMARY KEY (slug);
+
+
+--
+-- Name: collections collections_pkey; Type: CONSTRAINT; Schema: public; Owner: default
+--
+
+ALTER TABLE ONLY public.collections
+    ADD CONSTRAINT collections_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: products products_pkey; Type: CONSTRAINT; Schema: public; Owner: default
+--
+
+ALTER TABLE ONLY public.products
+    ADD CONSTRAINT products_pkey PRIMARY KEY (slug);
+
+
+--
+-- Name: subcategories subcategories_pkey; Type: CONSTRAINT; Schema: public; Owner: default
+--
+
+ALTER TABLE ONLY public.subcategories
+    ADD CONSTRAINT subcategories_pkey PRIMARY KEY (slug);
+
+
+--
+-- Name: subcollections subcollections_pkey; Type: CONSTRAINT; Schema: public; Owner: default
+--
+
+ALTER TABLE ONLY public.subcollections
+    ADD CONSTRAINT subcollections_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: users users_pkey; Type: CONSTRAINT; Schema: public; Owner: default
+--
+
+ALTER TABLE ONLY public.users
+    ADD CONSTRAINT users_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: users users_username_unique; Type: CONSTRAINT; Schema: public; Owner: default
+--
+
+ALTER TABLE ONLY public.users
+    ADD CONSTRAINT users_username_unique UNIQUE (username);
+
+
+--
+-- Name: categories_collection_id_idx; Type: INDEX; Schema: public; Owner: default
+--
+
+CREATE INDEX categories_collection_id_idx ON public.categories USING btree (collection_id);
+
+
+--
+-- Name: name_search_index; Type: INDEX; Schema: public; Owner: default
+--
+
+CREATE INDEX name_search_index ON public.products USING gin (to_tsvector('english'::regconfig, name));
+
+
+--
+-- Name: name_trgm_index; Type: INDEX; Schema: public; Owner: default
+--
+
+CREATE INDEX name_trgm_index ON public.products USING gin (name public.gin_trgm_ops);
+
+
+--
+-- Name: products_subcategory_slug_idx; Type: INDEX; Schema: public; Owner: default
+--
+
+CREATE INDEX products_subcategory_slug_idx ON public.products USING btree (subcategory_slug);
+
+
+--
+-- Name: subcategories_subcollection_id_idx; Type: INDEX; Schema: public; Owner: default
+--
+
+CREATE INDEX subcategories_subcollection_id_idx ON public.subcategories USING btree (subcollection_id);
+
+
+--
+-- Name: subcollections_category_slug_idx; Type: INDEX; Schema: public; Owner: default
+--
+
+CREATE INDEX subcollections_category_slug_idx ON public.subcollections USING btree (category_slug);
+
+
+--
+-- Name: categories categories_collection_id_collections_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: default
+--
+
+ALTER TABLE ONLY public.categories
+    ADD CONSTRAINT categories_collection_id_collections_id_fk FOREIGN KEY (collection_id) REFERENCES public.collections(id) ON DELETE CASCADE;
+
+
+--
+-- Name: products products_subcategory_slug_subcategories_slug_fk; Type: FK CONSTRAINT; Schema: public; Owner: default
+--
+
+ALTER TABLE ONLY public.products
+    ADD CONSTRAINT products_subcategory_slug_subcategories_slug_fk FOREIGN KEY (subcategory_slug) REFERENCES public.subcategories(slug) ON DELETE CASCADE;
+
+
+--
+-- Name: subcategories subcategories_subcollection_id_subcollections_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: default
+--
+
+ALTER TABLE ONLY public.subcategories
+    ADD CONSTRAINT subcategories_subcollection_id_subcollections_id_fk FOREIGN KEY (subcollection_id) REFERENCES public.subcollections(id) ON DELETE CASCADE;
+
+
+--
+-- Name: subcollections subcollections_category_slug_categories_slug_fk; Type: FK CONSTRAINT; Schema: public; Owner: default
+--
+
+ALTER TABLE ONLY public.subcollections
+    ADD CONSTRAINT subcollections_category_slug_categories_slug_fk FOREIGN KEY (category_slug) REFERENCES public.categories(slug) ON DELETE CASCADE;
+
+
+--
+-- Name: DEFAULT PRIVILEGES FOR SEQUENCES; Type: DEFAULT ACL; Schema: public; Owner: cloud_admin
+--
+
+ALTER DEFAULT PRIVILEGES FOR ROLE cloud_admin IN SCHEMA public GRANT ALL ON SEQUENCES TO neon_superuser WITH GRANT OPTION;
+
+
+--
+-- Name: DEFAULT PRIVILEGES FOR TABLES; Type: DEFAULT ACL; Schema: public; Owner: cloud_admin
+--
+
+ALTER DEFAULT PRIVILEGES FOR ROLE cloud_admin IN SCHEMA public GRANT ALL ON TABLES TO neon_superuser WITH GRANT OPTION;
+
+
+--
+-- PostgreSQL database dump complete
+--
+
