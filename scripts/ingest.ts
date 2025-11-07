@@ -9,12 +9,19 @@
  */
 
 // Load environment variables FIRST before any imports that use them
-import { loadEnvConfig } from "@next/env";
+import dotenv from "dotenv";
 import path from "path";
 
-// Load .env files from project root
-const projectDir = path.resolve(__dirname, "..");
-loadEnvConfig(projectDir);
+// Load .env file from project root
+const envPath = path.resolve(__dirname, "..", ".env");
+dotenv.config({ path: envPath });
+
+// Verify database URL is loaded
+if (!process.env.POSTGRES_URL) {
+  console.error("❌ Error: POSTGRES_URL environment variable is not set!");
+  console.error("   Please check your .env file.");
+  process.exit(1);
+}
 
 import { ingestFolder } from "../src/lib/ingestion/ingest-folder";
 import { Command } from "commander";
