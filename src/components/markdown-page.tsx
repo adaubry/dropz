@@ -1,10 +1,13 @@
-import { readFile } from 'fs/promises'
-import { join } from 'path'
+import { readFile, access } from 'fs/promises'
+import { resolve, isAbsolute } from 'path'
+import { constants } from 'fs'
 import { compileMDX } from 'next-mdx-remote/rsc'
 import remarkGfm from 'remark-gfm'
 import rehypeHighlight from 'rehype-highlight'
 import { MDXContent } from './mdx-component'
 import { useMDXComponents } from './mdx-component'
+
+// This is a server component - do not add 'use client'
 
 interface MarkdownPageProps {
   /**
@@ -36,8 +39,20 @@ export async function MarkdownPage({
   className,
 }: MarkdownPageProps) {
   try {
+    // Resolve the full path properly
+    const projectRoot = process.cwd()
+    const fullPath = isAbsolute(filePath)
+      ? filePath
+      : resolve(projectRoot, filePath)
+
+    // Check if file exists before reading
+    try {
+      await access(fullPath, constants.R_OK)
+    } catch {
+      throw new Error(`File not found or not readable: ${fullPath}`)
+    }
+
     // Read the markdown file from the file system
-    const fullPath = join(process.cwd(), filePath)
     const source = await readFile(fullPath, 'utf-8')
 
     // Compile MDX with performance optimizations
@@ -74,18 +89,34 @@ export async function MarkdownPage({
       </div>
     )
   } catch (error) {
+    const projectRoot = process.cwd()
+    const fullPath = isAbsolute(filePath)
+      ? filePath
+      : resolve(projectRoot, filePath)
+
     console.error(`Failed to load markdown file: ${filePath}`, error)
+    console.error(`Project root: ${projectRoot}`)
+    console.error(`Full path attempted: ${fullPath}`)
+
     return (
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         <div className="rounded-lg border border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950 p-6">
           <h2 className="text-lg font-semibold text-red-900 dark:text-red-100 mb-2">
             Error Loading Markdown
           </h2>
-          <p className="text-red-700 dark:text-red-300">
-            Failed to load markdown file: <code>{filePath}</code>
+          <p className="text-red-700 dark:text-red-300 mb-2">
+            Failed to load markdown file: <code className="bg-red-100 dark:bg-red-900 px-2 py-1 rounded">{filePath}</code>
           </p>
-          <p className="text-sm text-red-600 dark:text-red-400 mt-2">
-            Make sure the file exists in the project root.
+          <details className="text-sm text-red-600 dark:text-red-400 mt-3">
+            <summary className="cursor-pointer font-semibold mb-2">Debug Information</summary>
+            <div className="mt-2 space-y-1 font-mono text-xs">
+              <p>Project root: <code>{projectRoot}</code></p>
+              <p>Attempted path: <code>{fullPath}</code></p>
+              <p>Error: <code>{error instanceof Error ? error.message : String(error)}</code></p>
+            </div>
+          </details>
+          <p className="text-sm text-red-600 dark:text-red-400 mt-3">
+            Make sure the file exists at the specified path.
           </p>
         </div>
       </div>
@@ -101,7 +132,11 @@ export async function getMarkdownContent(
   filePath: string = 'README.md'
 ): Promise<string | null> {
   try {
-    const fullPath = join(process.cwd(), filePath)
+    const projectRoot = process.cwd()
+    const fullPath = isAbsolute(filePath)
+      ? filePath
+      : resolve(projectRoot, filePath)
+
     const content = await readFile(fullPath, 'utf-8')
     return content
   } catch (error) {
