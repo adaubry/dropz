@@ -9,6 +9,28 @@ import { useMDXComponents } from './mdx-component'
 
 // This is a server component - do not add 'use client'
 
+/**
+ * Pre-process markdown content to fix HTML self-closing tags for MDX compatibility
+ * MDX requires JSX syntax, so HTML tags like <img> need to be <img />
+ */
+function preprocessMarkdownForMDX(source: string): string {
+  let processed = source
+
+  // Convert <img ...> to <img ... />
+  processed = processed.replace(/<img([^>]*[^/])>/gi, '<img$1 />')
+  // Convert <br> to <br />
+  processed = processed.replace(/<br>/gi, '<br />')
+  // Convert <hr> to <hr />
+  processed = processed.replace(/<hr>/gi, '<hr />')
+  // Convert other common self-closing tags
+  processed = processed.replace(
+    /<(area|base|col|embed|input|link|meta|param|source|track|wbr)([^>]*[^/])>/gi,
+    '<$1$2 />'
+  )
+
+  return processed
+}
+
 interface MarkdownPageProps {
   /**
    * Path to the markdown file relative to the project root
@@ -53,7 +75,10 @@ export async function MarkdownPage({
     }
 
     // Read the markdown file from the file system
-    const source = await readFile(fullPath, 'utf-8')
+    let source = await readFile(fullPath, 'utf-8')
+
+    // Pre-process markdown to fix HTML self-closing tags for MDX compatibility
+    source = preprocessMarkdownForMDX(source)
 
     // Compile MDX with performance optimizations
     const { content, frontmatter } = await compileMDX({
@@ -151,11 +176,14 @@ export async function getMarkdownContent(
  */
 export async function getCompiledMarkdown(filePath: string = 'README.md') {
   try {
-    const source = await getMarkdownContent(filePath)
+    let source = await getMarkdownContent(filePath)
 
     if (!source) {
       return null
     }
+
+    // Pre-process markdown to fix HTML self-closing tags for MDX compatibility
+    source = preprocessMarkdownForMDX(source)
 
     const result = await compileMDX({
       source,
