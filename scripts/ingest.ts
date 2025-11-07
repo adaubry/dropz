@@ -8,6 +8,14 @@
  *   npm run ingest -- -p my-docs -d ./content --clear
  */
 
+// Load environment variables FIRST before any imports that use them
+import { loadEnvConfig } from "@next/env";
+import path from "path";
+
+// Load .env files from project root
+const projectDir = path.resolve(__dirname, "..");
+loadEnvConfig(projectDir);
+
 import { ingestFolder } from "../src/lib/ingestion/ingest-folder";
 import { Command } from "commander";
 
