@@ -2,6 +2,7 @@ import { ProductLink } from "@/components/ui/product-card";
 import Image from "next/image";
 import { notFound } from "next/navigation";
 import { Metadata } from "next";
+import { Link } from "@/components/ui/link";
 
 import { getDropDetails, getDropsForRiver } from "@/lib/queries";
 
@@ -57,13 +58,13 @@ export default async function Page(props: {
       {/* Breadcrumb navigation */}
       <nav className="text-sm mb-4 text-gray-600">
         <span>🌍 Planet</span>
-        {" / "}
-        <a href={`/drops/${ocean}`} className="hover:underline">
+        <span> / </span>
+        <Link prefetch={true} href={`/drops/${ocean}`} className="hover:underline">
           {ocean}
-        </a>
-        {" / "}
+        </Link>
+        <span> / </span>
         <span>{river}</span>
-        {" / "}
+        <span> / </span>
         <span className="font-semibold">{drop}</span>
       </nav>
 

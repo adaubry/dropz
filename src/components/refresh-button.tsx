@@ -13,13 +13,20 @@ export function RefreshButton() {
   };
 
   return (
-    <button
+    <div
       onClick={handleRefresh}
-      className="flex items-center gap-1 hover:bg-accent2 hover:underline"
+      className="flex items-center gap-1 hover:bg-accent2 hover:underline cursor-pointer"
       title="Refresh content from database"
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          handleRefresh();
+        }
+      }}
     >
       <RefreshCw className="h-3 w-3" />
       <span>Refresh</span>
-    </button>
+    </div>
   );
 }
