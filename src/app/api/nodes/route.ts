@@ -7,6 +7,7 @@ import {
   getActiveEditingSession,
   createNodeBackup,
 } from "@/lib/queries";
+import { eq, and } from "drizzle-orm";
 import matter from "gray-matter";
 
 /**
@@ -72,28 +73,64 @@ export async function POST(request: NextRequest) {
       // TODO: Parse markdown to HTML here
     }
 
-    // Create the node
-    const [newNode] = await db
-      .insert(nodes)
-      .values({
-        planet_id: workspace.id,
-        slug,
-        title,
-        namespace,
-        depth,
-        file_path: namespace ? `${namespace}/${slug}` : slug,
-        type,
-        node_type: getNodeType(depth),
-        content: processedContent,
-        parsed_html: parsedHtml,
-        metadata: processedMetadata,
-      })
-      .returning();
+    // Check if node already exists
+    const existingNode = await db.query.nodes.findFirst({
+      where: and(
+        eq(nodes.planet_id, workspace.id),
+        eq(nodes.namespace, namespace),
+        eq(nodes.slug, slug)
+      ),
+    });
 
-    // Create backup
-    await createNodeBackup(session.id, newNode, "create");
+    let resultNode;
 
-    return NextResponse.json(newNode, { status: 201 });
+    if (existingNode) {
+      // Node exists - update it instead
+      // Create backup first
+      await createNodeBackup(session.id, existingNode, "update");
+
+      // Update the node
+      const [updatedNode] = await db
+        .update(nodes)
+        .set({
+          title,
+          type,
+          node_type: getNodeType(depth),
+          content: processedContent,
+          parsed_html: parsedHtml,
+          metadata: processedMetadata,
+          updated_at: new Date(),
+        })
+        .where(eq(nodes.id, existingNode.id))
+        .returning();
+
+      resultNode = updatedNode;
+    } else {
+      // Node doesn't exist - create it
+      const [newNode] = await db
+        .insert(nodes)
+        .values({
+          planet_id: workspace.id,
+          slug,
+          title,
+          namespace,
+          depth,
+          file_path: namespace ? `${namespace}/${slug}` : slug,
+          type,
+          node_type: getNodeType(depth),
+          content: processedContent,
+          parsed_html: parsedHtml,
+          metadata: processedMetadata,
+        })
+        .returning();
+
+      // Create backup
+      await createNodeBackup(session.id, newNode, "create");
+
+      resultNode = newNode;
+    }
+
+    return NextResponse.json(resultNode, { status: existingNode ? 200 : 201 });
   } catch (error: any) {
     console.error("Error creating node:", error);
     return NextResponse.json(
