@@ -27,6 +27,8 @@ export default async function Page(props: {
 
   const finalCount = countRes[0]?.count;
 
+  let imageCount = 0;
+
   return (
     <div className="container p-4">
       {finalCount && (
@@ -51,7 +53,7 @@ export default async function Page(props: {
                   >
                     <div className="py-2">
                       <Image
-                        loading="eager"
+                        loading={imageCount++ < 15 ? "eager" : "lazy"}
                         decoding="sync"
                         src={river.image_url ?? "/placeholder.svg"}
                         alt={`A small picture of ${river.name}`}

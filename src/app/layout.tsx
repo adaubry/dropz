@@ -12,6 +12,8 @@ import { GeistSans } from "geist/font/sans";
 import { GeistMono } from "geist/font/mono";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { RefreshButton } from "@/components/refresh-button";
+import { ImageLoadingProvider } from "@/lib/image-loading-context";
+import { PageCacheProvider } from "@/components/page-cache-provider";
 
 export const metadata: Metadata = {
   title: {
@@ -33,6 +35,8 @@ export default async function RootLayout({
       <body
         className={`${GeistSans.variable} ${GeistMono.variable} flex flex-col overflow-y-auto overflow-x-hidden antialiased`}
       >
+        <ImageLoadingProvider>
+        <PageCacheProvider>
         <div>
           <header className="fixed top-0 z-10 flex h-[90px] w-[100vw] flex-grow items-center justify-between border-b-2 border-accent2 bg-background p-2 pb-[4px] pt-2 sm:h-[70px] sm:flex-row sm:gap-4 sm:p-4 sm:pb-[4px] sm:pt-0">
             <div className="flex flex-grow flex-col">
@@ -103,6 +107,8 @@ export default async function RootLayout({
         </Suspense>
         <Analytics scriptSrc="/insights/events.js" endpoint="/hfi/events" />
         <SpeedInsights />
+        </PageCacheProvider>
+        </ImageLoadingProvider>
       </body>
     </html>
   );

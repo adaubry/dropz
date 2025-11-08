@@ -50,6 +50,8 @@ export default async function Page(props: {
     ...relatedUnshifted.slice(0, currentDropIndex),
   ];
 
+  let imageCount = 0;
+
   return (
     <div className="container p-4 max-w-4xl mx-auto">
       {/* Breadcrumb navigation */}
@@ -71,7 +73,7 @@ export default async function Page(props: {
 
         {dropData.image_url && (
           <Image
-            loading="eager"
+            loading={imageCount++ < 15 ? "eager" : "lazy"}
             decoding="sync"
             src={dropData.image_url}
             alt={`Cover image for ${dropData.name}`}
@@ -101,7 +103,7 @@ export default async function Page(props: {
             {related.map((relatedDrop) => (
               <ProductLink
                 key={relatedDrop.name}
-                loading="lazy"
+                loading={imageCount++ < 15 ? "eager" : "lazy"}
                 ocean_slug={ocean}
                 river_slug={river}
                 drop={relatedDrop}
