@@ -2,6 +2,8 @@ import Image from "next/image";
 import { Link } from "@/components/ui/link";
 import { notFound } from "next/navigation";
 import { getOcean, getOceanDropCount } from "@/lib/queries";
+import { UniversalSidebar } from "@/components/universal-sidebar";
+import { buildOceanSidebar } from "@/lib/sidebar-builder";
 import { db } from "@/db";
 import { oceans } from "@/db/schema";
 
@@ -24,13 +26,23 @@ export default async function Page(props: {
   }
 
   const countRes = await getOceanDropCount(urlDecoded);
+  const sidebarData = await buildOceanSidebar("", urlDecoded);
 
   const finalCount = countRes[0]?.count;
 
   let imageCount = 0;
 
   return (
-    <div className="container p-4">
+    <>
+      <UniversalSidebar
+        parentLink={sidebarData.parentLink}
+        currentItems={sidebarData.currentItems}
+      />
+      <main
+        className="min-h-[calc(100vh-113px)] flex-1 overflow-y-auto p-4 pt-0 md:pl-64"
+        id="main-content"
+      >
+        <div className="container p-4">
       {finalCount && (
         <h1 className="mb-2 border-b-2 text-sm font-bold">
           {finalCount} {finalCount === 1 ? "Drop" : "Drops"}
@@ -75,6 +87,8 @@ export default async function Page(props: {
           </div>
         ))}
       </div>
-    </div>
+      </div>
+      </main>
+    </>
   );
 }

@@ -1,8 +1,6 @@
 import { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getOcean } from "@/lib/queries";
-import { UniversalSidebar } from "@/components/universal-sidebar";
-import { buildOceanSidebar } from "@/lib/sidebar-builder";
 
 export async function generateMetadata({
   params,
@@ -34,21 +32,10 @@ export async function generateMetadata({
 
 export default async function Layout({
   children,
-  params,
 }: {
   children: React.ReactNode;
-  params: Promise<{ ocean: string }>;
 }) {
-  const { ocean } = await params;
-  const sidebarData = await buildOceanSidebar("", ocean);
-
-  return (
-    <>
-      <UniversalSidebar
-        parentLink={sidebarData.parentLink}
-        currentItems={sidebarData.currentItems}
-      />
-      {children}
-    </>
-  );
+  // Don't render sidebar here - parent layout handles it
+  return <>{children}</>;
 }
+

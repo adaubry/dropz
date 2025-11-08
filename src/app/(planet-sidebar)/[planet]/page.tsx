@@ -1,5 +1,7 @@
 import { Link } from "@/components/ui/link";
 import { getPlanetBySlug, getOceans } from "@/lib/queries-nodes";
+import { UniversalSidebar } from "@/components/universal-sidebar";
+import { buildPlanetSidebar } from "@/lib/sidebar-builder";
 import Image from "next/image";
 
 export const revalidate = 0;
@@ -22,10 +24,20 @@ export default async function Home(props: {
   }
 
   const oceans = await getOceans(planet.id);
+  const sidebarData = await buildPlanetSidebar(planetSlug);
   let imageCount = 0;
 
   return (
-    <div className="w-full p-4">
+    <>
+      <UniversalSidebar
+        parentLink={sidebarData.parentLink}
+        currentItems={sidebarData.currentItems}
+      />
+      <main
+        className="min-h-[calc(100vh-113px)] flex-1 overflow-y-auto p-4 pt-0 md:pl-64"
+        id="main-content"
+      >
+        <div className="w-full p-4">
       <div key={planet.name}>
         <h2 className="text-xl font-semibold">{planet.name}</h2>
         <div className="flex flex-row flex-wrap justify-center gap-2 border-b-2 py-4 sm:justify-start">
@@ -51,6 +63,8 @@ export default async function Home(props: {
           ))}
         </div>
       </div>
-    </div>
+      </div>
+      </main>
+    </>
   );
 }

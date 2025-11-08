@@ -1,4 +1,4 @@
-export default async function RiverLayout({
+export default async function PlanetLayout({
   children,
 }: {
   children: React.ReactNode;

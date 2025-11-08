@@ -6,6 +6,8 @@ import {
   getRiver,
   getRiverDropCount,
 } from "@/lib/queries";
+import { UniversalSidebar } from "@/components/universal-sidebar";
+import { buildRiverSidebar } from "@/lib/sidebar-builder";
 // import { db } from "@/db";
 
 export const revalidate = 0;
@@ -57,7 +59,7 @@ export default async function Page(props: {
   }>;
 }) {
   const { river, ocean } = await props.params;
-  // const urlDecodedOcean = decodeURIComponent(ocean);
+  const urlDecodedOcean = decodeURIComponent(ocean);
   const urlDecodedRiver = decodeURIComponent(river);
   const [drops, countRes] = await Promise.all([
     getDropsForRiver(urlDecodedRiver),
@@ -68,29 +70,42 @@ export default async function Page(props: {
     return notFound();
   }
 
+  const sidebarData = await buildRiverSidebar("", urlDecodedOcean, urlDecodedRiver);
+
   const finalCount = countRes[0]?.count;
   let imageCount = 0;
   return (
-    <div className="container mx-auto p-4">
-      {finalCount > 0 ? (
-        <h1 className="mb-2 border-b-2 text-sm font-bold">
-          {finalCount} {finalCount === 1 ? "Drop" : "Drops"}
-        </h1>
-      ) : (
-        <p>No drops for this river</p>
-      )}
-      <div className="flex flex-row flex-wrap gap-2">
-        {drops.map((drop) => (
-          <ProductLink
-            key={drop.name}
-            loading={imageCount++ < 15 ? "eager" : "lazy"}
-            ocean_slug={ocean}
-            river_slug={river}
-            drop={drop}
-            imageUrl={drop.image_url}
-          />
-        ))}
-      </div>
-    </div>
+    <>
+      <UniversalSidebar
+        parentLink={sidebarData.parentLink}
+        currentItems={sidebarData.currentItems}
+      />
+      <main
+        className="min-h-[calc(100vh-113px)] flex-1 overflow-y-auto p-4 pt-0 md:pl-64"
+        id="main-content"
+      >
+        <div className="container mx-auto p-4">
+          {finalCount > 0 ? (
+            <h1 className="mb-2 border-b-2 text-sm font-bold">
+              {finalCount} {finalCount === 1 ? "Drop" : "Drops"}
+            </h1>
+          ) : (
+            <p>No drops for this river</p>
+          )}
+          <div className="flex flex-row flex-wrap gap-2">
+            {drops.map((drop) => (
+              <ProductLink
+                key={drop.name}
+                loading={imageCount++ < 15 ? "eager" : "lazy"}
+                ocean_slug={ocean}
+                river_slug={river}
+                drop={drop}
+                imageUrl={drop.image_url}
+              />
+            ))}
+          </div>
+        </div>
+      </main>
+    </>
   );
 }

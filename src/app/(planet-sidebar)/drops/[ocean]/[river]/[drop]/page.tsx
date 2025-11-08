@@ -5,6 +5,8 @@ import { Metadata } from "next";
 import { Link } from "@/components/ui/link";
 
 import { getDropDetails, getDropsForRiver } from "@/lib/queries";
+import { UniversalSidebar } from "@/components/universal-sidebar";
+import { buildDropSidebar } from "@/lib/sidebar-builder";
 
 export const revalidate = 0;
 
@@ -35,6 +37,7 @@ export default async function Page(props: {
   const { drop, river, ocean } = await props.params;
   const urlDecodedDrop = decodeURIComponent(drop);
   const urlDecodedRiver = decodeURIComponent(river);
+  const urlDecodedOcean = decodeURIComponent(ocean);
   const [dropData, relatedUnshifted] = await Promise.all([
     getDropDetails(urlDecodedDrop),
     getDropsForRiver(urlDecodedRiver),
@@ -51,10 +54,21 @@ export default async function Page(props: {
     ...relatedUnshifted.slice(0, currentDropIndex),
   ];
 
+  const sidebarData = await buildDropSidebar("", urlDecodedOcean, urlDecodedRiver);
+
   let imageCount = 0;
 
   return (
-    <div className="container p-4 max-w-4xl mx-auto">
+    <>
+      <UniversalSidebar
+        parentLink={sidebarData.parentLink}
+        currentItems={sidebarData.currentItems}
+      />
+      <main
+        className="min-h-[calc(100vh-113px)] flex-1 overflow-y-auto p-4 pt-0 md:pl-64"
+        id="main-content"
+      >
+        <div className="container p-4 max-w-4xl mx-auto">
       {/* Breadcrumb navigation */}
       <nav className="text-sm mb-4 text-gray-600">
         <span>🌍 Planet</span>
@@ -114,6 +128,8 @@ export default async function Page(props: {
           </div>
         </aside>
       )}
-    </div>
+        </div>
+      </main>
+    </>
   );
 }

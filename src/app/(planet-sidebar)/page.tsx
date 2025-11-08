@@ -1,5 +1,7 @@
 import { Link } from "@/components/ui/link";
 import { getPlanets, getOceans } from "@/lib/queries-nodes";
+import { UniversalSidebar } from "@/components/universal-sidebar";
+import { buildHomeSidebar } from "@/lib/sidebar-builder";
 
 import Image from "next/image";
 
@@ -16,10 +18,21 @@ export default async function Home() {
     }))
   );
 
+  const sidebarData = await buildHomeSidebar();
+
   let imageCount = 0;
 
   return (
-    <div className="w-full p-4">
+    <>
+      <UniversalSidebar
+        parentLink={sidebarData.parentLink}
+        currentItems={sidebarData.currentItems}
+      />
+      <main
+        className="min-h-[calc(100vh-113px)] flex-1 overflow-y-auto p-4 pt-0 md:pl-64"
+        id="main-content"
+      >
+        <div className="w-full p-4">
       {planetsWithOceans.map(({ planet, oceans }) => (
         <div key={planet.name}>
           <h2 className="text-xl font-semibold">{planet.name}</h2>
@@ -47,6 +60,8 @@ export default async function Home() {
           </div>
         </div>
       ))}
-    </div>
+      </div>
+      </main>
+    </>
   );
 }
