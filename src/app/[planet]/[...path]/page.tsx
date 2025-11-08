@@ -33,7 +33,7 @@ interface WaterCardProps {
 }
 
 function WaterCard({ title, metadata, href, type, imageCount }: WaterCardProps) {
-  const cover = metadata?.cover || "/default-water.svg";
+  const cover = metadata?.cover || "/placeholder.svg";
   const summary = metadata?.summary || "Explore this content...";
   const icon = type === "folder" ? "📁" : "💧";
 
@@ -41,7 +41,7 @@ function WaterCard({ title, metadata, href, type, imageCount }: WaterCardProps) 
     <Link
       prefetch={true}
       href={href}
-      className="group block border rounded-lg overflow-hidden hover:shadow-lg transition-shadow bg-white dark:bg-gray-800"
+      className="group block border overflow-hidden hover:shadow-lg transition-shadow bg-white dark:bg-gray-800"
     >
       {cover && cover !== "/default-water.svg" && (
         <div className="aspect-video relative bg-gray-100 dark:bg-gray-700">
@@ -175,7 +175,7 @@ export default async function DynamicPage({
               width={800}
               height={400}
               quality={80}
-              className="w-full h-64 object-cover rounded-lg mb-6"
+              className="w-full h-64 object-cover  lg mb-6"
             />
           )}
 

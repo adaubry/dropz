@@ -99,7 +99,7 @@ const mdxComponents: MDXComponents = {
       </code>
     ) : (
       <code
-        className={`${className} relative block rounded-lg bg-gray-950 dark:bg-gray-900 p-4 font-mono text-sm overflow-x-auto`}
+        className={`${className} relative block  lg bg-gray-950 dark:bg-gray-900 p-4 font-mono text-sm overflow-x-auto`}
         {...props}
       >
         {children}
@@ -108,7 +108,7 @@ const mdxComponents: MDXComponents = {
   },
   pre: ({ children, ...props }) => (
     <pre
-      className="mb-4 mt-4 overflow-x-auto rounded-lg bg-gray-950 dark:bg-gray-900 p-4"
+      className="mb-4 mt-4 overflow-x-auto  lg bg-gray-950 dark:bg-gray-900 p-4"
       {...props}
     >
       {children}
@@ -133,7 +133,7 @@ const mdxComponents: MDXComponents = {
       alt={alt || ''}
       loading="lazy"
       decoding="sync"
-      className="rounded-lg my-4 max-w-full h-auto"
+      className=" lg my-4 max-w-full h-auto"
       {...props}
     />
   ),

@@ -81,7 +81,7 @@ export default async function Page(props: {
             width={800}
             height={400}
             quality={80}
-            className="w-full h-64 object-cover rounded-lg mb-6"
+            className="w-full h-64 object-cover  lg mb-6"
           />
         )}
 

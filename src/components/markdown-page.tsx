@@ -125,7 +125,7 @@ export async function MarkdownPage({
 
     return (
       <div className="container mx-auto px-4 py-8 max-w-4xl">
-        <div className="rounded-lg border border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950 p-6">
+        <div className=" lg border border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950 p-6">
           <h2 className="text-lg font-semibold text-red-900 dark:text-red-100 mb-2">
             Error Loading Markdown
           </h2>

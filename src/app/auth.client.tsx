@@ -36,7 +36,7 @@ export function LoginForm() {
             spellCheck={false}
             required
             maxLength={50}
-            className="relative block w-full appearance-none rounded-[1px] border px-3 py-2 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-orange-500 focus:outline-none focus:ring-orange-500 sm:text-sm"
+            className="relative block w-full appearance-none  border px-3 py-2 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-orange-500 focus:outline-none focus:ring-orange-500 sm:text-sm"
             placeholder="Username"
           />
         </div>
@@ -50,7 +50,7 @@ export function LoginForm() {
               type="password"
               required
               maxLength={100}
-              className="relative block w-full appearance-none rounded-[1px] border px-3 py-2 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-orange-500 focus:outline-none focus:ring-orange-500 sm:text-sm"
+              className="relative block w-full appearance-none  border px-3 py-2 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-orange-500 focus:outline-none focus:ring-orange-500 sm:text-sm"
               placeholder="Password"
             />
           </div>
@@ -58,7 +58,7 @@ export function LoginForm() {
 
         <Button
           type="submit"
-          className="rounded-[1px] bg-accent1 px-4 py-2 text-xs font-semibold text-white shadow-sm hover:bg-accent1 focus:outline-none focus:ring-2 focus:ring-accent1 focus:ring-offset-2"
+          className=" bg-accent1 px-4 py-2 text-xs font-semibold text-white shadow-sm hover:bg-accent1 focus:outline-none focus:ring-2 focus:ring-accent1 focus:ring-offset-2"
           disabled={pending}
           formAction={signInFormAction}
         >
@@ -68,7 +68,7 @@ export function LoginForm() {
         <Button
           type="submit"
           variant={"ghost"}
-          className="rounded-[2px] border-[1px] border-accent1 bg-white px-4 py-2 text-xs font-semibold text-accent1"
+          className=" border-[1px] border-accent1 bg-white px-4 py-2 text-xs font-semibold text-accent1"
           disabled={pending}
           formAction={signUpFormAction}
         >
@@ -115,7 +115,7 @@ export function SignOut(props: { username: string }) {
           <Button
             formAction={signOut}
             variant={"ghost"}
-            className="rounded-[2px] border-[1px] border-accent1 bg-white px-4 py-2 text-xs font-semibold text-accent1"
+            className=" border-[1px] border-accent1 bg-white px-4 py-2 text-xs font-semibold text-accent1"
           >
             {"Sign Out"}
           </Button>
