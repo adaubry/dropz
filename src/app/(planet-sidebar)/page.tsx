@@ -1,38 +1,47 @@
 import { Link } from "@/components/ui/link";
-import { getPlanets } from "@/lib/queries";
+import { getPlanets, getOceans } from "@/lib/queries-nodes";
 
 import Image from "next/image";
 
 export const revalidate = 0;
 
 export default async function Home() {
-  const [planets] = await Promise.all([getPlanets()]);
+  const planets = await getPlanets();
+
+  // Fetch oceans for all planets
+  const planetsWithOceans = await Promise.all(
+    planets.map(async (planet) => ({
+      planet,
+      oceans: await getOceans(planet.id),
+    }))
+  );
+
   let imageCount = 0;
 
   return (
     <div className="w-full p-4">
-      {planets.map((planet) => (
+      {planetsWithOceans.map(({ planet, oceans }) => (
         <div key={planet.name}>
           <h2 className="text-xl font-semibold">{planet.name}</h2>
           <div className="flex flex-row flex-wrap justify-center gap-2 border-b-2 py-4 sm:justify-start">
-            {planet.oceans.map((sea) => (
+            {oceans.map((ocean) => (
               <Link
                 prefetch={true}
-                key={sea.slug}
+                key={ocean.slug}
                 className="flex w-[125px] flex-col items-center text-center"
-                href={`/${planet.slug}/${oceans.slug}/${sea.slug}`}
+                href={`/${planet.slug}/${ocean.slug}`}
               >
                 <Image
                   loading={imageCount++ < 15 ? "eager" : "lazy"}
                   decoding="sync"
-                  src={sea.image_url ?? "/placeholder.svg"}
-                  alt={`A small picture of ${sea.name}`}
+                  src={ocean.metadata?.image_url ?? "/placeholder.svg"}
+                  alt={`A small picture of ${ocean.title}`}
                   className="mb-2 h-14 w-14 border hover:bg-accent2"
                   width={48}
                   height={48}
                   quality={65}
                 />
-                <span className="text-xs">{sea.name}</span>
+                <span className="text-xs">{ocean.title}</span>
               </Link>
             ))}
           </div>
