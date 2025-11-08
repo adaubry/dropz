@@ -12,11 +12,13 @@
  */
 
 import { notFound } from "next/navigation";
-import { getNodeByPath, getNodeChildren, getPlanetBySlug, getUser } from "@/lib/queries";
+import { getNodeByPath, getNodeChildren, getPlanetBySlug, getUser, getActiveEditingSession } from "@/lib/queries";
 import { MarkdownPage } from "@/components/markdown-page";
 import { Link } from "@/components/ui/link";
 import Image from "next/image";
 import { EditingToolbar } from "@/components/editing-toolbar";
+import { EditableCard } from "@/components/editable-card";
+import { EditableMarkdown } from "@/components/editable-markdown";
 
 export const revalidate = 0;
 
@@ -87,6 +89,12 @@ export default async function DynamicPage({
   // Check if this is the user's own workspace
   const isOwnWorkspace = user && planetData.user_id === user.id;
 
+  // Check if editing mode is active
+  const editingSession = isOwnWorkspace
+    ? await getActiveEditingSession(user.id, planetData.id)
+    : null;
+  const isEditingActive = !!editingSession;
+
   // CRITICAL: This works for ANY depth!
   // Examples:
   // - path = [] → root planet page
@@ -122,14 +130,12 @@ export default async function DynamicPage({
         {children.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {children.map((child) => (
-              <WaterCard
+              <EditableCard
                 key={child.id}
-                title={child.title}
-                slug={child.slug}
-                metadata={child.metadata as any}
+                node={child}
                 href={`/${planet}/${child.slug}`}
-                type={child.type}
                 imageCount={imageCount++}
+                isEditing={isEditingActive}
               />
             ))}
           </div>
@@ -159,6 +165,11 @@ export default async function DynamicPage({
           id="main-content"
         >
           <div className="container mx-auto p-4 max-w-4xl">
+        {/* Editable markdown editor (only in edit mode) */}
+        {isEditingActive && (
+          <EditableMarkdown node={node} isEditing={isEditingActive} />
+        )}
+
         {/* Breadcrumb navigation */}
         <nav className="mb-6 text-sm text-gray-600 dark:text-gray-400">
           <Link
@@ -279,14 +290,12 @@ export default async function DynamicPage({
       {children.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {children.map((child) => (
-            <WaterCard
+            <EditableCard
               key={child.id}
-              title={child.title}
-              slug={child.slug}
-              metadata={child.metadata as any}
+              node={child}
               href={`/${planet}/${[...path, child.slug].join("/")}`}
-              type={child.type}
               imageCount={imageCount++}
+              isEditing={isEditingActive}
             />
           ))}
         </div>
