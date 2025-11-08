@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 interface FileUploadDropzoneProps {
@@ -14,6 +14,61 @@ interface FileWithPath {
   relativePath: string;
 }
 
+// Recursively read all files from a directory entry
+async function readDirectory(
+  entry: any,
+  basePath: string = ""
+): Promise<FileWithPath[]> {
+  const files: FileWithPath[] = [];
+
+  if (entry.isFile) {
+    const file: File = await new Promise((resolve, reject) => {
+      entry.file(resolve, reject);
+    });
+
+    // Only process markdown files
+    if (/\.mdx?$/i.test(file.name)) {
+      files.push({
+        file,
+        relativePath: basePath,
+      });
+    }
+  } else if (entry.isDirectory) {
+    const reader = entry.createReader();
+    const entries: any[] = await new Promise((resolve, reject) => {
+      reader.readEntries(resolve, reject);
+    });
+
+    for (const subEntry of entries) {
+      const subPath = basePath ? `${basePath}/${entry.name}` : entry.name;
+      const subFiles = await readDirectory(subEntry, subPath);
+      files.push(...subFiles);
+    }
+  }
+
+  return files;
+}
+
+// Get all files from dropped items (handles both files and directories)
+async function getAllFiles(
+  dataTransferItems: DataTransferItemList
+): Promise<FileWithPath[]> {
+  const allFiles: FileWithPath[] = [];
+
+  for (let i = 0; i < dataTransferItems.length; i++) {
+    const item = dataTransferItems[i];
+    if (item.kind === "file") {
+      const entry = item.webkitGetAsEntry?.() || item.getAsEntry?.();
+      if (entry) {
+        const files = await readDirectory(entry);
+        allFiles.push(...files);
+      }
+    }
+  }
+
+  return allFiles;
+}
+
 export function FileUploadDropzone({
   workspaceSlug,
   currentPath,
@@ -23,84 +78,57 @@ export function FileUploadDropzone({
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState("");
   const router = useRouter();
+  const dragCounter = useRef(0);
 
-  // Recursively read all files from a directory entry
-  const readDirectory = async (
-    entry: any,
-    basePath: string = ""
-  ): Promise<FileWithPath[]> => {
-    const files: FileWithPath[] = [];
+  // Use window-level drag events to properly detect drag over page
+  useEffect(() => {
+    if (!isActive) return;
 
-    if (entry.isFile) {
-      const file: File = await new Promise((resolve, reject) => {
-        entry.file(resolve, reject);
-      });
-
-      // Only process markdown files
-      if (/\.mdx?$/i.test(file.name)) {
-        files.push({
-          file,
-          relativePath: basePath,
-        });
+    const handleDragEnter = (e: DragEvent) => {
+      e.preventDefault();
+      dragCounter.current++;
+      if (e.dataTransfer?.items && e.dataTransfer.items.length > 0) {
+        setIsDragging(true);
       }
-    } else if (entry.isDirectory) {
-      const reader = entry.createReader();
-      const entries: any[] = await new Promise((resolve, reject) => {
-        reader.readEntries(resolve, reject);
-      });
+    };
 
-      for (const subEntry of entries) {
-        const subPath = basePath ? `${basePath}/${entry.name}` : entry.name;
-        const subFiles = await readDirectory(subEntry, subPath);
-        files.push(...subFiles);
+    const handleDragOver = (e: DragEvent) => {
+      e.preventDefault();
+    };
+
+    const handleDragLeave = (e: DragEvent) => {
+      e.preventDefault();
+      dragCounter.current--;
+      if (dragCounter.current === 0) {
+        setIsDragging(false);
       }
-    }
+    };
 
-    return files;
-  };
+    const handleDrop = (e: DragEvent) => {
+      e.preventDefault();
+      dragCounter.current = 0;
+      setIsDragging(false);
+    };
 
-  // Get all files from dropped items (handles both files and directories)
-  const getAllFiles = async (
-    dataTransferItems: DataTransferItemList
-  ): Promise<FileWithPath[]> => {
-    const allFiles: FileWithPath[] = [];
+    window.addEventListener('dragenter', handleDragEnter);
+    window.addEventListener('dragover', handleDragOver);
+    window.addEventListener('dragleave', handleDragLeave);
+    window.addEventListener('drop', handleDrop);
 
-    for (let i = 0; i < dataTransferItems.length; i++) {
-      const item = dataTransferItems[i];
-      if (item.kind === "file") {
-        const entry = item.webkitGetAsEntry?.() || item.getAsEntry?.();
-        if (entry) {
-          const files = await readDirectory(entry);
-          allFiles.push(...files);
-        }
-      }
-    }
-
-    return allFiles;
-  };
-
-  const handleDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (isActive) {
-      setIsDragging(true);
-    }
+    return () => {
+      window.removeEventListener('dragenter', handleDragEnter);
+      window.removeEventListener('dragover', handleDragOver);
+      window.removeEventListener('dragleave', handleDragLeave);
+      window.removeEventListener('drop', handleDrop);
+    };
   }, [isActive]);
 
-  const handleDragLeave = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-
-    // Only set isDragging to false if we're leaving the window entirely
-    if (e.currentTarget === e.target) {
-      setIsDragging(false);
-    }
-  }, []);
-
-  const handleDrop = useCallback(
+  const handleFileDrop = useCallback(
     async (e: React.DragEvent) => {
       e.preventDefault();
       e.stopPropagation();
+
+      dragCounter.current = 0;
       setIsDragging(false);
 
       if (!isActive) {
@@ -179,17 +207,12 @@ export function FileUploadDropzone({
   }
 
   return (
-    <div
-      onDragOver={handleDragOver}
-      onDragLeave={handleDragLeave}
-      onDrop={handleDrop}
-      className={`
-        fixed inset-0 z-40 pointer-events-none
-        ${isDragging ? "pointer-events-auto" : ""}
-      `}
-    >
+    <>
       {isDragging && (
-        <div className="absolute inset-0 bg-blue-500 bg-opacity-10 border-4 border-dashed border-blue-500 flex items-center justify-center">
+        <div
+          onDrop={handleFileDrop}
+          className="fixed inset-0 z-50 bg-blue-500 bg-opacity-10 border-4 border-dashed border-blue-500 flex items-center justify-center"
+        >
           <div className="bg-white dark:bg-gray-800 rounded-lg p-8 shadow-2xl max-w-md">
             <div className="text-center">
               <svg
@@ -235,6 +258,6 @@ export function FileUploadDropzone({
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }
