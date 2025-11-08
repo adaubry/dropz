@@ -2,6 +2,7 @@
 
 import { Link } from "@/components/ui/link";
 import { useState } from "react";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 export interface SidebarItem {
   id: string;
@@ -18,8 +19,13 @@ export interface UniversalSidebarProps {
   currentItems: SidebarItem[];
 }
 
-function CollapsibleSection({ item }: { item: SidebarItem }) {
-  const [isOpen, setIsOpen] = useState(true);
+interface CollapsibleSectionProps {
+  item: SidebarItem;
+  isOpen: boolean;
+  onToggle: () => void;
+}
+
+function CollapsibleSection({ item, isOpen, onToggle }: CollapsibleSectionProps) {
   const hasChildren = item.children && item.children.length > 0;
 
   return (
@@ -27,14 +33,14 @@ function CollapsibleSection({ item }: { item: SidebarItem }) {
       <div className="flex items-start">
         {hasChildren && (
           <div
-            onClick={() => setIsOpen(!isOpen)}
+            onClick={onToggle}
             className="mt-1 mr-1 cursor-pointer select-none text-xs"
             role="button"
             tabIndex={0}
             onKeyDown={(e) => {
               if (e.key === "Enter" || e.key === " ") {
                 e.preventDefault();
-                setIsOpen(!isOpen);
+                onToggle();
               }
             }}
           >
@@ -52,7 +58,15 @@ function CollapsibleSection({ item }: { item: SidebarItem }) {
       {hasChildren && isOpen && (
         <ul className="ml-4 border-l pl-2">
           {item.children!.map((child) => (
-            <CollapsibleSection key={child.id} item={child} />
+            <li key={child.id} className="w-full">
+              <Link
+                prefetch={true}
+                href={child.href}
+                className="block py-1 text-xs text-gray-800 hover:bg-accent2 hover:underline"
+              >
+                {child.title}
+              </Link>
+            </li>
           ))}
         </ul>
       )}
@@ -61,30 +75,48 @@ function CollapsibleSection({ item }: { item: SidebarItem }) {
 }
 
 export function UniversalSidebar({ parentLink, currentItems }: UniversalSidebarProps) {
-  return (
-    <aside className="fixed left-0 hidden w-64 min-w-64 max-w-64 overflow-y-auto border-r p-4 md:block md:h-full">
-      {/* Parent link (n-1) - just a back button */}
-      {parentLink && (
-        <div className="mb-2 ">
-          <Link
-            prefetch={true}
-            href={parentLink.href}
-            className="flex items-center text-sm text-gray-600 hover:text-accent1 hover:underline font-semibold"
-          >
-            <div className="pr-2">↪</div>
-            {parentLink.title}
-          </Link>
-        </div>
-      )}
+  // Only one item can be expanded at a time - first item is expanded by default
+  const [expandedItemId, setExpandedItemId] = useState<string | null>(
+    currentItems.length > 0 ? currentItems[0].id : null
+  );
 
-      {/* Current navigation (n) with children (n+1) */}
-      <div>
-        <ul className="flex flex-col items-start justify-center">
-          {currentItems.map((item) => (
-            <CollapsibleSection key={item.id} item={item} />
-          ))}
-        </ul>
-      </div>
+  const handleToggle = (itemId: string) => {
+    setExpandedItemId((current) => (current === itemId ? null : itemId));
+  };
+
+  return (
+    <aside className="fixed left-0 hidden w-64 min-w-64 max-w-64 border-r md:block h-[calc(100vh-113px)] top-[113px]">
+      <ScrollArea className="h-full w-full">
+        <div className="p-4">
+          {/* Parent link (n-1) - just a back button */}
+          {parentLink && (
+            <div className="mb-2">
+              <Link
+                prefetch={true}
+                href={parentLink.href}
+                className="flex items-center text-sm text-gray-600 hover:text-accent1 hover:underline font-semibold"
+              >
+                <div className="pr-2">↪</div>
+                {parentLink.title}
+              </Link>
+            </div>
+          )}
+
+          {/* Current navigation (n+1) with children (n+2) */}
+          <div>
+            <ul className="flex flex-col items-start justify-center">
+              {currentItems.map((item) => (
+                <CollapsibleSection
+                  key={item.id}
+                  item={item}
+                  isOpen={expandedItemId === item.id}
+                  onToggle={() => handleToggle(item.id)}
+                />
+              ))}
+            </ul>
+          </div>
+        </div>
+      </ScrollArea>
     </aside>
   );
 }
