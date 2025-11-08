@@ -132,7 +132,7 @@ const mdxComponents: MDXComponents = {
       src={src}
       alt={alt || ''}
       loading="lazy"
-      decoding="async"
+      decoding="sync"
       className="rounded-lg my-4 max-w-full h-auto"
       {...props}
     />

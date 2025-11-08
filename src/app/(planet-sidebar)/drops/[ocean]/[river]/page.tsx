@@ -69,6 +69,7 @@ export default async function Page(props: {
   }
 
   const finalCount = countRes[0]?.count;
+  let imageCount = 0;
   return (
     <div className="container mx-auto p-4">
       {finalCount > 0 ? (
@@ -82,7 +83,7 @@ export default async function Page(props: {
         {drops.map((drop) => (
           <ProductLink
             key={drop.name}
-            loading="eager"
+            loading={imageCount++ < 15 ? "eager" : "lazy"}
             ocean_slug={ocean}
             river_slug={river}
             drop={drop}

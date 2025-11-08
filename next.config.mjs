@@ -6,7 +6,7 @@ const nextConfig = {
   // Enable MDX support for .mdx files in app directory
   pageExtensions: ['js', 'jsx', 'md', 'mdx', 'ts', 'tsx'],
   experimental: {
-    ppr: false,
+    ppr: 'incremental',
     inlineCss: true,
     reactCompiler: true,
     // MDX is already optimized with React Server Components

@@ -83,9 +83,8 @@ export const Link: typeof NextLink = (({ children, ...props }) => {
   return (
     <NextLink
       ref={linkRef}
-      prefetch={false}
+      prefetch={true}
       onMouseEnter={() => {
-        router.prefetch(String(props.href));
         const images = imageCache.get(String(props.href)) || [];
         for (const image of images) {
           prefetchImage(image);
