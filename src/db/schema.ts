@@ -4,7 +4,6 @@ import {
   index,
   integer,
   jsonb,
-  numeric,
   pgTable,
   serial,
   text,
@@ -15,12 +14,13 @@ import {
 import { relations } from "drizzle-orm";
 
 // ============================================
-// WATER HIERARCHY: Planet → Ocean → Sea → River → Drop
+// UNIFIED NODES SYSTEM - Namespace-based Hierarchy
+// Supports arbitrary depth: Planet → [Any Levels] → Drop
 // ============================================
 
 /**
  * Planets: Top-level workspaces/sites (Level 0)
- * Enhanced for future migration to unified nodes system
+ * Examples: "Documentation Site", "Course Materials", "Knowledge Base"
  */
 export const planets = pgTable("planets", {
   id: serial("id").primaryKey(),
@@ -34,102 +34,19 @@ export const planets = pgTable("planets", {
 export type Planet = typeof planets.$inferSelect;
 export type NewPlanet = typeof planets.$inferInsert;
 
-export const oceans = pgTable(
-  "oceans",
-  {
-    slug: text("slug").notNull().primaryKey(),
-    name: text("name").notNull(),
-    planet_id: integer("planet_id")
-      .notNull()
-      .references(() => planets.id, { onDelete: "cascade" }),
-    image_url: text("image_url"),
-  },
-  (table) => ({
-    planetIdIdx: index("oceans_planet_id_idx").on(
-      table.planet_id,
-    ),
-  }),
-);
-
-export type Ocean = typeof oceans.$inferSelect;
-
-export const seas = pgTable(
-  "seas",
-  {
-    id: serial("id").primaryKey(),
-    name: text("name").notNull(),
-    ocean_slug: text("ocean_slug")
-      .notNull()
-      .references(() => oceans.slug, { onDelete: "cascade" }),
-  },
-  (table) => ({
-    oceanSlugIdx: index("seas_ocean_slug_idx").on(
-      table.ocean_slug,
-    ),
-  }),
-);
-
-export type Sea = typeof seas.$inferSelect;
-
-export const rivers = pgTable(
-  "rivers",
-  {
-    slug: text("slug").notNull().primaryKey(),
-    name: text("name").notNull(),
-    sea_id: integer("sea_id")
-      .notNull()
-      .references(() => seas.id, { onDelete: "cascade" }),
-    image_url: text("image_url"),
-  },
-  (table) => ({
-    seaIdIdx: index("rivers_sea_id_idx").on(
-      table.sea_id,
-    ),
-  }),
-);
-
-export type River = typeof rivers.$inferSelect;
-
-export const drops = pgTable(
-  "drops",
-  {
-    slug: text("slug").notNull().primaryKey(),
-    name: text("name").notNull(),
-    description: text("description").notNull(),
-    price: numeric("price").notNull(),
-    river_slug: text("river_slug")
-      .notNull()
-      .references(() => rivers.slug, { onDelete: "cascade" }),
-    image_url: text("image_url"),
-  },
-  (table) => ({
-    nameSearchIndex: index("name_search_index").using(
-      "gin",
-      sql`to_tsvector('english', ${table.name})`,
-    ),
-    nameTrgmIndex: index("name_trgm_index")
-      .using("gin", sql`${table.name} gin_trgm_ops`)
-      .concurrently(),
-    riverSlugIdx: index("drops_river_slug_idx").on(
-      table.river_slug,
-    ),
-  }),
-);
-
-export type Drop = typeof drops.$inferSelect;
-
-// ============================================
-// NEW UNIFIED NODES SYSTEM (Migration Roadmap 1.1)
-// ============================================
-
 /**
- * Unified Nodes Table: Future replacement for oceans/seas/rivers/drops
+ * Unified Nodes Table: Stores all content hierarchy levels + files
  * Namespace-based storage allows arbitrary depth without parent_id chains
  *
+ * Key Innovation: Flat storage with namespace paths
  * Examples:
- * - /intro.md → namespace: "", depth: 0
- * - /guides/setup.md → namespace: "guides", depth: 1
- * - /courses/cs101/w1/d1/lecture.md → namespace: "courses/cs101/w1/d1", depth: 4
+ * - /intro.md → namespace: "", depth: 0, slug: "intro"
+ * - /guides/setup.md → namespace: "guides", depth: 1, slug: "setup"
+ * - /courses/cs101/w1/d1/lecture.md → namespace: "courses/cs101/w1/d1", depth: 4, slug: "lecture"
+ * - /a/b/c/d/e/f/g/deep.md → namespace: "a/b/c/d/e/f/g", depth: 7, slug: "deep"
+ *
+ * Query Performance: O(1) lookups via indexed (planet_id, namespace, slug)
+ * No recursive CTEs needed! No parent_id joins! No depth limitations!
  */
 export const nodes = pgTable(
   "nodes",
@@ -271,48 +188,18 @@ export type NewUser = typeof users.$inferInsert;
 // RELATIONS
 // ============================================
 
+/**
+ * Planet Relations
+ * A planet contains many nodes (folders and files)
+ */
 export const planetsRelations = relations(planets, ({ many }) => ({
-  oceans: many(oceans),
-  nodes: many(nodes), // New unified nodes system
+  nodes: many(nodes),
 }));
 
-export const oceansRelations = relations(oceans, ({ one, many }) => ({
-  planet: one(planets, {
-    fields: [oceans.planet_id],
-    references: [planets.id],
-  }),
-  seas: many(seas),
-}));
-
-export const seasRelations = relations(
-  seas,
-  ({ one, many }) => ({
-    ocean: one(oceans, {
-      fields: [seas.ocean_slug],
-      references: [oceans.slug],
-    }),
-    rivers: many(rivers),
-  }),
-);
-
-export const riversRelations = relations(
-  rivers,
-  ({ one, many }) => ({
-    sea: one(seas, {
-      fields: [rivers.sea_id],
-      references: [seas.id],
-    }),
-    drops: many(drops),
-  }),
-);
-
-export const dropsRelations = relations(drops, ({ one }) => ({
-  river: one(rivers, {
-    fields: [drops.river_slug],
-    references: [rivers.slug],
-  }),
-}));
-
+/**
+ * Node Relations
+ * Each node belongs to a planet and can have bidirectional links to other nodes
+ */
 export const nodesRelations = relations(nodes, ({ one, many }) => ({
   planet: one(planets, {
     fields: [nodes.planet_id],
@@ -322,6 +209,10 @@ export const nodesRelations = relations(nodes, ({ one, many }) => ({
   linksTo: many(nodeLinks, { relationName: "to" }),
 }));
 
+/**
+ * Node Links Relations
+ * Bidirectional connections between nodes for "related content", "see also", backlinks, etc.
+ */
 export const nodeLinksRelations = relations(nodeLinks, ({ one }) => ({
   fromNode: one(nodes, {
     fields: [nodeLinks.from_node_id],

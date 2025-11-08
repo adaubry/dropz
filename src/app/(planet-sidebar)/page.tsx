@@ -1,8 +1,5 @@
 import { Link } from "@/components/ui/link";
-import { getPlanets, getOceans } from "@/lib/queries-nodes";
-import { UniversalSidebar } from "@/components/universal-sidebar";
-import { buildHomeSidebar } from "@/lib/sidebar-builder";
-
+import { getPlanets, getOceans } from "@/lib/queries";
 import Image from "next/image";
 
 export const revalidate = 0;
@@ -10,15 +7,13 @@ export const revalidate = 0;
 export default async function Home() {
   const planets = await getPlanets();
 
-  // Fetch oceans for all planets
+  // Fetch oceans (root-level folders) for all planets
   const planetsWithOceans = await Promise.all(
     planets.map(async (planet) => ({
       planet,
       oceans: await getOceans(planet.id),
     }))
   );
-
-  const sidebarData = await buildHomeSidebar();
 
   let imageCount = 0;
 

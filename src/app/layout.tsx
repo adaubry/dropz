@@ -12,8 +12,7 @@ import { ImageLoadingProvider } from "@/lib/image-loading-context";
 import { PageCacheProvider } from "@/components/page-cache-provider";
 import { RefreshButton } from "@/components/refresh-button";
 import { UniversalSidebar } from "@/components/universal-sidebar";
-import { getNodeByPath, getNodeChildren, getPlanetBySlug } from "@/lib/queries-nodes";
-
+import { getNodeByPath, getNodeChildren, getPlanetBySlug } from "@/lib/queries";
 import { buildNodesSidebar } from "@/lib/sidebar-builder-nodes";
 
 export const metadata: Metadata = {

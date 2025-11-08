@@ -4,7 +4,7 @@ import {
   getPlanetBySlug,
   getNodeByPath,
   getNodeChildren,
-} from "./queries-nodes";
+} from "./queries";
 
 /**
  * Build sidebar for catch-all route (nodes-based)
