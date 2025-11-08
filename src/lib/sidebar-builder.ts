@@ -10,7 +10,7 @@ import { getOcean, getRiver, getDropsForRiver } from "./queries";
 
 /**
  * Build sidebar for home page
- * Shows all oceans (n+1) - looking forward
+ * Shows all oceans (n+1) with their rivers (n+2) - looking forward
  */
 export async function buildHomeSidebar(): Promise<{
   parentLink?: { title: string; href: string };
@@ -27,12 +27,32 @@ export async function buildHomeSidebar(): Promise<{
   );
   const allOceans = allOceansNested.flat();
 
-  // Map oceans to sidebar items (no children - only showing n+1)
-  const currentItems: SidebarItem[] = allOceans.map((ocean) => ({
-    id: ocean.id,
-    title: ocean.title,
-    href: `/${ocean.planetSlug}/${ocean.slug}`,
-  }));
+  // For each ocean (n+1), get its rivers (n+2)
+  const currentItems: SidebarItem[] = await Promise.all(
+    allOceans.map(async (ocean) => {
+      try {
+        const oceanData = await getOcean(ocean.slug);
+        const rivers = oceanData?.seas.flatMap((sea) => sea.rivers) || [];
+
+        return {
+          id: ocean.id,
+          title: ocean.title,
+          href: `/${ocean.planetSlug}/${ocean.slug}`,
+          children: rivers.map((river) => ({
+            id: river.slug,
+            title: river.name,
+            href: `/drops/${ocean.slug}/${river.slug}`,
+          })),
+        };
+      } catch {
+        return {
+          id: ocean.id,
+          title: ocean.title,
+          href: `/${ocean.planetSlug}/${ocean.slug}`,
+        };
+      }
+    })
+  );
 
   return {
     currentItems,
@@ -42,7 +62,7 @@ export async function buildHomeSidebar(): Promise<{
 /**
  * Build sidebar for planet page
  * Parent (n-1): Just a back link to home
- * Current (n+1): Rivers from oceans in THIS planet - looking forward
+ * Current (n+1): Rivers with their drops (n+2) - looking forward
  */
 export async function buildPlanetSidebar(planetSlug: string): Promise<{
   parentLink?: { title: string; href: string };
@@ -69,12 +89,30 @@ export async function buildPlanetSidebar(planetSlug: string): Promise<{
   );
   const allRivers = allRiversNested.flat();
 
-  // Map rivers to sidebar items (no children - only showing n+1)
-  const currentItems: SidebarItem[] = allRivers.map((river) => ({
-    id: river.slug,
-    title: river.name,
-    href: `/drops/${river.oceanSlug}/${river.slug}`,
-  }));
+  // For each river (n+1), get its drops (n+2)
+  const currentItems: SidebarItem[] = await Promise.all(
+    allRivers.map(async (river) => {
+      try {
+        const drops = await getDropsForRiver(river.slug);
+        return {
+          id: river.slug,
+          title: river.name,
+          href: `/drops/${river.oceanSlug}/${river.slug}`,
+          children: drops.map((drop) => ({
+            id: drop.slug,
+            title: drop.name,
+            href: `/drops/${river.oceanSlug}/${river.slug}/${drop.slug}`,
+          })),
+        };
+      } catch {
+        return {
+          id: river.slug,
+          title: river.name,
+          href: `/drops/${river.oceanSlug}/${river.slug}`,
+        };
+      }
+    })
+  );
 
   return {
     parentLink: {
