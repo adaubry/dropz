@@ -3,7 +3,6 @@ import "./globals.css";
 import { SearchDropdownComponent } from "@/components/search-dropdown";
 import { MenuIcon } from "lucide-react";
 import { Suspense } from "react";
-import { Cart } from "@/components/cart";
 import { AuthServer } from "./auth.server";
 import { Link } from "@/components/ui/link";
 import { Analytics } from "@vercel/analytics/react";
@@ -57,40 +56,14 @@ export default async function RootLayout({
                   href="/"
                   className="text-4xl font-bold text-accent1"
                 >
-                  NextFaster
+                  Dropz
                 </Link>
                 <div className="items flex w-full flex-row items-center justify-between gap-4">
                   <div className="mx-0 flex-grow sm:mx-auto sm:flex-grow-0">
                     <SearchDropdownComponent />
                   </div>
                   <div className="flex flex-row justify-between space-x-4">
-                    <div className="relative">
-                      <Link
-                        prefetch={true}
-                        href="/order"
-                        className="text-lg text-accent1 hover:underline"
-                      >
-                        ORDER
-                      </Link>
-                      <Suspense>
-                        <Cart />
-                      </Suspense>
-                    </div>
-                    <Link
-                      prefetch={true}
-                      href="/order-history"
-                      className="hidden text-lg text-accent1 hover:underline md:block"
-                    >
-                      ORDER HISTORY
-                    </Link>
-                    <Link
-                      prefetch={true}
-                      href="/order-history"
-                      aria-label="Order History"
-                      className="block text-lg text-accent1 hover:underline md:hidden"
-                    >
-                      <MenuIcon />
-                    </Link>
+
                   </div>
                 </div>
               </div>
@@ -115,7 +88,7 @@ export default async function RootLayout({
           <div className="text-center sm:text-right">
             By using this website, you agree to check out the{" "}
             <Link
-              href="https://github.com/ethanniser/NextFaster"
+              href="https://github.com/adaubry/dropz"
               className="font-bold text-accent1 hover:underline"
               target="_blank"
             >
