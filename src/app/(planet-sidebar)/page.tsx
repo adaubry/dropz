@@ -18,9 +18,9 @@ export default async function Home() {
             {planet.oceans.map((sea) => (
               <Link
                 prefetch={true}
-                key={sea.name}
+                key={sea.slug}
                 className="flex w-[125px] flex-col items-center text-center"
-                href={`/drops/${sea.slug}`}
+                href={`/${planet.slug}/${oceans.slug}/${sea.slug}`}
               >
                 <Image
                   loading={imageCount++ < 15 ? "eager" : "lazy"}
