@@ -11,19 +11,18 @@ export default async function CatchAllLayout({
   const { planet, path = [] } = await params;
   const sidebarData = await buildNodesSidebar(planet, path);
 
-  
-
   return (
     <div className="flex flex-grow font-mono">
-
       <main
         className="min-h-[calc(100vh-113px)] flex-1 overflow-y-auto p-4 pt-0 md:pl-64"
         id="main-content"
       >
-        <UniversalSidebar
-          parentLink={sidebarData.parentLink}
-          currentItems={sidebarData.currentItems}
-        />
+        <div className="bg-green-400">
+          <UniversalSidebar
+            parentLink={sidebarData.parentLink}
+            currentItems={sidebarData.currentItems}
+          />
+        </div>
         {children}
       </main>
     </div>
