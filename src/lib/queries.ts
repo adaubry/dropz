@@ -172,6 +172,7 @@ export async function startEditingSession(
  * End editing session (apply changes)
  */
 export async function endEditingSession(sessionId: number): Promise<void> {
+  // Mark session as inactive
   await db
     .update(editingSessions)
     .set({
@@ -179,16 +180,36 @@ export async function endEditingSession(sessionId: number): Promise<void> {
       ended_at: new Date(),
     })
     .where(eq(editingSessions.id, sessionId));
+
+  // Clean up backups after successfully applying changes
+  // Since changes are accepted, we don't need the backups anymore
+  await db.delete(nodeBackups).where(eq(nodeBackups.session_id, sessionId));
 }
 
 /**
  * Create a backup of a node before modification
+ * Only creates ONE backup per node per session (keeps the original state)
  */
 export async function createNodeBackup(
   sessionId: number,
   node: Node,
   backupType: "create" | "update" | "delete"
-): Promise<NodeBackup> {
+): Promise<NodeBackup | null> {
+  // Check if a backup already exists for this node in this session
+  const existingBackup = await db.query.nodeBackups.findFirst({
+    where: and(
+      eq(nodeBackups.session_id, sessionId),
+      eq(nodeBackups.node_id, node.id)
+    ),
+  });
+
+  // If backup already exists, don't create another one
+  // This ensures we keep only the ORIGINAL state before ANY modifications
+  if (existingBackup) {
+    return existingBackup;
+  }
+
+  // Create the first backup for this node
   const [backup] = await db
     .insert(nodeBackups)
     .values({
@@ -227,7 +248,44 @@ export async function getSessionBackups(sessionId: number): Promise<NodeBackup[]
 }
 
 /**
+ * Calculate diff between current node and backup snapshot
+ * Only returns fields that have changed for optimized updates
+ */
+function calculateNodeDiff(
+  currentNode: Node,
+  snapshot: NodeBackup["snapshot"]
+): Partial<Node> {
+  const diff: Partial<Node> = {};
+
+  // Compare each field and only include changed ones
+  if (currentNode.slug !== snapshot.slug) diff.slug = snapshot.slug;
+  if (currentNode.title !== snapshot.title) diff.title = snapshot.title;
+  if (currentNode.namespace !== snapshot.namespace)
+    diff.namespace = snapshot.namespace;
+  if (currentNode.depth !== snapshot.depth) diff.depth = snapshot.depth;
+  if (currentNode.file_path !== snapshot.file_path)
+    diff.file_path = snapshot.file_path;
+  if (currentNode.type !== snapshot.type) diff.type = snapshot.type;
+  if (currentNode.node_type !== snapshot.node_type)
+    diff.node_type = snapshot.node_type;
+  if (currentNode.content !== snapshot.content) diff.content = snapshot.content;
+  if (currentNode.parsed_html !== snapshot.parsed_html)
+    diff.parsed_html = snapshot.parsed_html;
+  if (currentNode.order !== snapshot.order) diff.order = snapshot.order;
+  if (currentNode.is_index !== snapshot.is_index)
+    diff.is_index = snapshot.is_index;
+
+  // Deep compare metadata (JSONB field)
+  if (JSON.stringify(currentNode.metadata) !== JSON.stringify(snapshot.metadata)) {
+    diff.metadata = snapshot.metadata;
+  }
+
+  return diff;
+}
+
+/**
  * Discard changes - restore from backups and delete session
+ * Uses diff-based updates for better performance
  */
 export async function discardEditingSession(sessionId: number): Promise<void> {
   // Get all backups for this session
@@ -239,24 +297,23 @@ export async function discardEditingSession(sessionId: number): Promise<void> {
       // Delete the created node
       await db.delete(nodes).where(eq(nodes.id, backup.node_id));
     } else if (backup.backup_type === "update" && backup.node_id) {
-      // Restore the original node data
-      await db
-        .update(nodes)
-        .set({
-          slug: backup.snapshot.slug,
-          title: backup.snapshot.title,
-          namespace: backup.snapshot.namespace,
-          depth: backup.snapshot.depth,
-          file_path: backup.snapshot.file_path,
-          type: backup.snapshot.type,
-          node_type: backup.snapshot.node_type,
-          content: backup.snapshot.content,
-          parsed_html: backup.snapshot.parsed_html,
-          metadata: backup.snapshot.metadata,
-          order: backup.snapshot.order,
-          is_index: backup.snapshot.is_index,
-        })
-        .where(eq(nodes.id, backup.node_id));
+      // Get current node state
+      const currentNode = await db.query.nodes.findFirst({
+        where: eq(nodes.id, backup.node_id),
+      });
+
+      if (currentNode) {
+        // Calculate diff to only update changed fields (performance optimization)
+        const diff = calculateNodeDiff(currentNode, backup.snapshot);
+
+        // Only perform update if there are actual changes
+        if (Object.keys(diff).length > 0) {
+          await db
+            .update(nodes)
+            .set(diff)
+            .where(eq(nodes.id, backup.node_id));
+        }
+      }
     } else if (backup.backup_type === "delete") {
       // Recreate the deleted node
       await db.insert(nodes).values({
