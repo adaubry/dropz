@@ -1,7 +1,5 @@
 import { Link } from "@/components/ui/link";
-import { getPlanetBySlug, getOceans } from "@/lib/queries-nodes";
-import { UniversalSidebar } from "@/components/universal-sidebar";
-import { buildPlanetSidebar } from "@/lib/sidebar-builder";
+import { getPlanetBySlug, getOceans } from "@/lib/queries";
 import Image from "next/image";
 
 export const revalidate = 0;
@@ -24,7 +22,6 @@ export default async function Home(props: {
   }
 
   const oceans = await getOceans(planet.id);
-  const sidebarData = await buildPlanetSidebar(planetSlug);
   let imageCount = 0;
 
   return (

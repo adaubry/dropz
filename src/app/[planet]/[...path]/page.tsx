@@ -12,12 +12,10 @@
  */
 
 import { notFound } from "next/navigation";
-import { getNodeByPath, getNodeChildren, getPlanetBySlug } from "@/lib/queries-nodes";
+import { getNodeByPath, getNodeChildren, getPlanetBySlug } from "@/lib/queries";
 import { MarkdownPage } from "@/components/markdown-page";
 import { Link } from "@/components/ui/link";
 import Image from "next/image";
-import { UniversalSidebar } from "@/components/universal-sidebar";
-import { buildNodesSidebar } from "@/lib/sidebar-builder-nodes";
 
 export const revalidate = 0;
 
@@ -94,9 +92,6 @@ export default async function DynamicPage({
   const node = await getNodeByPath(planet, path);
 
   let imageCount = 0;
-
-  // Build sidebar for this level
-  const sidebarData = await buildNodesSidebar(planet, path);
 
   // If no node found and path is empty, show planet root
   if (!node && path.length === 0) {
