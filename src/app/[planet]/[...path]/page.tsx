@@ -104,12 +104,8 @@ export default async function DynamicPage({
 
     return (
       <>
-        <UniversalSidebar
-          parentLink={sidebarData.parentLink}
-          currentItems={sidebarData.currentItems}
-        />
         <main
-          className="min-h-[calc(100vh-113px)] flex-1 overflow-y-auto p-4 pt-0 md:pl-64"
+          className="min-h-[calc(100vh-113px)] flex-1 overflow-y-auto p-4 pt-0 "
           id="main-content"
         >
           <div className="container mx-auto p-4 max-w-7xl">
@@ -155,12 +151,9 @@ export default async function DynamicPage({
   if (node.type === "file") {
     return (
       <>
-        <UniversalSidebar
-          parentLink={sidebarData.parentLink}
-          currentItems={sidebarData.currentItems}
-        />
+        
         <main
-          className="min-h-[calc(100vh-113px)] flex-1 overflow-y-auto p-4 pt-0 md:pl-64"
+          className="min-h-[calc(100vh-113px)] flex-1 overflow-y-auto p-4 pt-0 "
           id="main-content"
         >
           <div className="container mx-auto p-4 max-w-4xl">
@@ -229,12 +222,10 @@ export default async function DynamicPage({
 
   return (
     <>
-      <UniversalSidebar
-        parentLink={sidebarData.parentLink}
-        currentItems={sidebarData.currentItems}
-      />
+      
+    
       <main
-        className="min-h-[calc(100vh-113px)] flex-1 overflow-y-auto p-4 pt-0 md:pl-64"
+        className="min-h-[calc(100vh-113px)] flex-1 overflow-y-auto p-4 pt-0 "
         id="main-content"
       >
         <div className="container mx-auto p-4 max-w-7xl">

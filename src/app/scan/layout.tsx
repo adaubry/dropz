@@ -7,16 +7,7 @@ export default async function ScanLayout({
 }) {
   return (
     <div className="flex flex-grow font-mono">
-      <UniversalSidebar
-        parentLink={{ title: "← Home", href: "/" }}
-        currentItems={[
-          {
-            id: "scan",
-            title: "Scan",
-            href: "/scan",
-          },
-        ]}
-      />
+
       <main
         className="min-h-[calc(100vh-113px)] flex-1 overflow-y-auto p-4 pt-0 md:pl-64"
         id="main-content"

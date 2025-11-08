@@ -11,6 +11,10 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 import { ImageLoadingProvider } from "@/lib/image-loading-context";
 import { PageCacheProvider } from "@/components/page-cache-provider";
 import { RefreshButton } from "@/components/refresh-button";
+import { UniversalSidebar } from "@/components/universal-sidebar";
+import { getNodeByPath, getNodeChildren, getPlanetBySlug } from "@/lib/queries-nodes";
+
+import { buildNodesSidebar } from "@/lib/sidebar-builder-nodes";
 
 export const metadata: Metadata = {
   title: {
@@ -21,6 +25,7 @@ export const metadata: Metadata = {
 };
 
 export const revalidate = 86400; // One day
+
 
 export default async function RootLayout({
   children,
@@ -35,8 +40,10 @@ export default async function RootLayout({
         <ImageLoadingProvider>
         <PageCacheProvider>
         <div>
+          
           <header className="fixed top-0 z-10 flex h-[90px] w-[100vw] flex-grow items-center justify-between border-b-2 border-accent2 bg-background p-2 pb-[4px] pt-2 sm:h-[70px] sm:flex-row sm:gap-4 sm:p-4 sm:pb-[4px] sm:pt-0">
             <div className="flex flex-grow flex-col">
+              
               <div className="absolute right-2 top-2 flex justify-end pt-2 font-sans text-sm  sm:relative sm:right-0 sm:top-0">
                 <div className="px-2">
                   <RefreshButton /></div>
@@ -72,9 +79,12 @@ export default async function RootLayout({
                   </div>
                 </div>
               </div>
+              
             </div>
           </header>
-          <div className="pt-[85px] sm:pt-[70px]">{children}</div>
+          
+          <div className="pt-[85px] sm:pt-[70px]">
+            {children}</div>
         </div>
 
         <Analytics scriptSrc="/insights/events.js" endpoint="/hfi/events" />

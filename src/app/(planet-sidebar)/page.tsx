@@ -24,10 +24,7 @@ export default async function Home() {
 
   return (
     <>
-      <UniversalSidebar
-        parentLink={sidebarData.parentLink}
-        currentItems={sidebarData.currentItems}
-      />
+
       <main
         className="min-h-[calc(100vh-113px)] flex-1 overflow-y-auto p-4 pt-0 md:pl-64"
         id="main-content"
