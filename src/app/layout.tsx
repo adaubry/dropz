@@ -43,12 +43,12 @@ export default async function RootLayout({
               <div className="absolute right-2 top-2 flex justify-end pt-2 font-sans text-sm hover:underline sm:relative sm:right-0 sm:top-0">
                 <Suspense
                   fallback={
-                    <div className="flex flex-row items-center gap-1">
+                    <button className="flex flex-row items-center gap-1">
                       <div className="h-[20px]" />
                       <svg viewBox="0 0 10 6" className="h-[6px] w-[10px]">
                         <polygon points="0,0 5,6 10,0"></polygon>
                       </svg>
-                    </div>
+                    </button>
                   }
                 >
                   <AuthServer />
