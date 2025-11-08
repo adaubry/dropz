@@ -1,5 +1,5 @@
 import { Link } from "@/components/ui/link";
-import { getPlanets } from "@/lib/queries";
+import { getPlanets } from "@/lib/queries-nodes";
 
 export default async function Layout({
   children,
