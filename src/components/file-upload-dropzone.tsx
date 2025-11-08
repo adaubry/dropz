@@ -172,6 +172,13 @@ export function FileUploadDropzone({
             : currentPath;
           const namespace = fullPath.join("/");
 
+          console.log(`[DEBUG] Uploading file: ${file.name}`);
+          console.log(`[DEBUG] - slug: ${slug}`);
+          console.log(`[DEBUG] - currentPath: ${JSON.stringify(currentPath)}`);
+          console.log(`[DEBUG] - relativePath: ${relativePath}`);
+          console.log(`[DEBUG] - fullPath: ${JSON.stringify(fullPath)}`);
+          console.log(`[DEBUG] - namespace: "${namespace}"`);
+
           // Create the node via API
           const response = await fetch("/api/nodes", {
             method: "POST",

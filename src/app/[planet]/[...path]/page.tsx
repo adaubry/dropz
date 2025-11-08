@@ -20,6 +20,7 @@ import { EditingToolbar } from "@/components/editing-toolbar";
 import { EditableCard } from "@/components/editable-card";
 import { EditableMarkdown } from "@/components/editable-markdown";
 
+export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 interface WaterCardProps {
@@ -109,6 +110,10 @@ export default async function DynamicPage({
   // If no node found and path is empty, show planet root
   if (!node && path.length === 0) {
     const children = await getNodeChildren(planetData.id, "");
+
+    console.log(`[DEBUG] Planet root: ${planet}, planetId: ${planetData.id}`);
+    console.log(`[DEBUG] Children count: ${children.length}`);
+    console.log(`[DEBUG] Children:`, children.map(c => ({ id: c.id, slug: c.slug, namespace: c.namespace, type: c.type })));
 
     return (
       <>
