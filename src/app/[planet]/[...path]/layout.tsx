@@ -1,12 +1,15 @@
 import { UniversalSidebar } from "@/components/universal-sidebar";
-import { buildHomeSidebar } from "@/lib/sidebar-builder";
+import { buildNodesSidebar } from "@/lib/sidebar-builder-nodes";
 
-export default async function Layout({
+export default async function CatchAllLayout({
   children,
+  params,
 }: {
   children: React.ReactNode;
+  params: Promise<{ planet: string; path?: string[] }>;
 }) {
-  const sidebarData = await buildHomeSidebar();
+  const { planet, path = [] } = await params;
+  const sidebarData = await buildNodesSidebar(planet, path);
 
   return (
     <div className="flex flex-grow font-mono">

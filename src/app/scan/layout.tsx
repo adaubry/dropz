@@ -1,17 +1,18 @@
 import { UniversalSidebar } from "@/components/universal-sidebar";
 import { buildHomeSidebar } from "@/lib/sidebar-builder";
 
-export default async function Layout({
+export default async function ScanLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  // Use home sidebar for scan page
   const sidebarData = await buildHomeSidebar();
 
   return (
     <div className="flex flex-grow font-mono">
       <UniversalSidebar
-        parentLink={sidebarData.parentLink}
+        parentLink={{ title: "Home", href: "/" }}
         currentItems={sidebarData.currentItems}
       />
       <main
