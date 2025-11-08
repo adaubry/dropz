@@ -154,6 +154,63 @@ export function FileUploadDropzone({
           return;
         }
 
+        // Extract all unique folder paths that need to be created
+        const folderPaths = new Set<string>();
+        filesWithPaths.forEach(({ relativePath }) => {
+          if (relativePath) {
+            // Split the relativePath to get all folder levels
+            const parts = relativePath.split("/").filter(Boolean);
+            // Add each cumulative path
+            for (let i = 0; i < parts.length; i++) {
+              const folderPath = parts.slice(0, i + 1).join("/");
+              folderPaths.add(folderPath);
+            }
+          }
+        });
+
+        // Sort folder paths by depth (shallowest first) to create parents before children
+        const sortedFolderPaths = Array.from(folderPaths).sort(
+          (a, b) => a.split("/").length - b.split("/").length
+        );
+
+        console.log(`[DEBUG] Creating ${sortedFolderPaths.length} folders and ${filesWithPaths.length} files`);
+        console.log(`[DEBUG] Folders:`, sortedFolderPaths);
+
+        setUploadProgress(`Creating folder structure...`);
+
+        // Create all folder nodes first
+        for (const folderPath of sortedFolderPaths) {
+          const pathParts = folderPath.split("/");
+          const folderSlug = pathParts[pathParts.length - 1];
+          const folderNamespace = [...currentPath, ...pathParts.slice(0, -1)]
+            .filter(Boolean)
+            .join("/");
+
+          console.log(`[DEBUG] Creating folder: ${folderSlug} in namespace: "${folderNamespace}"`);
+
+          const response = await fetch("/api/nodes", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              slug: folderSlug,
+              title: folderSlug.replace(/-/g, " ").replace(/\b\w/g, (l: string) => l.toUpperCase()),
+              namespace: folderNamespace,
+              type: "folder",
+              content: "",
+            }),
+          });
+
+          if (!response.ok) {
+            const data = await response.json();
+            // Ignore duplicate folder errors
+            if (!data.error?.includes("duplicate")) {
+              console.warn(`Failed to create folder ${folderSlug}:`, data.error);
+            }
+          }
+        }
+
         setUploadProgress(`Uploading ${filesWithPaths.length} file(s)...`);
 
         // Process each file
@@ -201,7 +258,7 @@ export function FileUploadDropzone({
         }
 
         // Refresh the page to show new files
-        alert(`Successfully uploaded ${filesWithPaths.length} file(s)!`);
+        alert(`Successfully uploaded ${sortedFolderPaths.length} folder(s) and ${filesWithPaths.length} file(s)!`);
         router.refresh();
       } catch (err: any) {
         console.error("Upload error:", err);

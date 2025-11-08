@@ -87,8 +87,13 @@ export default async function DynamicPage({
   const planetData = await getPlanetBySlug(planet);
   if (!planetData) return notFound();
 
+  console.log(`[DEBUG] Page load for planet: ${planet}`);
+  console.log(`[DEBUG] - User:`, user ? { id: user.id, username: user.username } : 'NOT LOGGED IN');
+  console.log(`[DEBUG] - Planet data:`, { id: planetData.id, name: planetData.name, user_id: planetData.user_id });
+
   // Check if this is the user's own workspace
   const isOwnWorkspace = user && planetData.user_id === user.id;
+  console.log(`[DEBUG] - isOwnWorkspace: ${isOwnWorkspace} (user=${!!user}, user.id=${user?.id}, planet.user_id=${planetData.user_id})`);
 
   // Check if editing mode is active
   const editingSession = isOwnWorkspace
