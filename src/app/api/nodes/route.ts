@@ -18,25 +18,33 @@ export async function POST(request: NextRequest) {
   try {
     const user = await getUser();
     if (!user) {
+      console.error("[API /api/nodes] No user found");
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    console.log(`[API /api/nodes] User: ${user.id}, looking up workspace...`);
     const workspace = await getUserWorkspace(user.id);
     if (!workspace) {
+      console.error(`[API /api/nodes] No workspace found for user ${user.id}`);
       return NextResponse.json(
-        { error: "No workspace found" },
+        { error: `No workspace found for user ${user.id}. Please create a workspace first.` },
         { status: 404 }
       );
     }
 
+    console.log(`[API /api/nodes] Found workspace: ${workspace.id}`);
+
     // Check for active editing session
     const session = await getActiveEditingSession(user.id, workspace.id);
     if (!session) {
+      console.error(`[API /api/nodes] No active editing session for user ${user.id}, workspace ${workspace.id}`);
       return NextResponse.json(
         { error: "No active editing session. Please enable editing mode." },
         { status: 403 }
       );
     }
+
+    console.log(`[API /api/nodes] Active editing session found: ${session.id}`);
 
     const body = await request.json();
     const {

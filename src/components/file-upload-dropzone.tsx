@@ -188,26 +188,40 @@ export function FileUploadDropzone({
 
           console.log(`[DEBUG] Creating folder: ${folderSlug} in namespace: "${folderNamespace}"`);
 
-          const response = await fetch("/api/nodes", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              slug: folderSlug,
-              title: folderSlug.replace(/-/g, " ").replace(/\b\w/g, (l: string) => l.toUpperCase()),
-              namespace: folderNamespace,
-              type: "folder",
-              content: "",
-            }),
-          });
+          try {
+            const response = await fetch("/api/nodes", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                slug: folderSlug,
+                title: folderSlug.replace(/-/g, " ").replace(/\b\w/g, (l: string) => l.toUpperCase()),
+                namespace: folderNamespace,
+                type: "folder",
+                content: "",
+              }),
+            });
 
-          if (!response.ok) {
-            const data = await response.json();
-            // Ignore duplicate folder errors
-            if (!data.error?.includes("duplicate")) {
-              console.warn(`Failed to create folder ${folderSlug}:`, data.error);
+            if (!response.ok) {
+              const data = await response.json().catch(() => ({ error: `HTTP ${response.status}` }));
+              console.error(`[ERROR] Failed to create folder ${folderSlug}:`, {
+                status: response.status,
+                statusText: response.statusText,
+                error: data.error,
+                details: data.details
+              });
+
+              // Only ignore duplicate errors, throw on everything else
+              if (response.status !== 200 && !data.error?.includes("duplicate")) {
+                throw new Error(`Failed to create folder "${folderSlug}": ${data.error || response.statusText}`);
+              }
+            } else {
+              console.log(`[DEBUG] Successfully created folder: ${folderSlug}`);
             }
+          } catch (err: any) {
+            console.error(`[ERROR] Exception creating folder ${folderSlug}:`, err);
+            throw err;
           }
         }
 
