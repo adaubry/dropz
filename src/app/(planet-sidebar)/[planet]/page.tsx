@@ -3,6 +3,7 @@ import { getPlanetBySlug, getOceans, getUser } from "@/lib/queries";
 import Image from "next/image";
 import { EditingToolbar } from "@/components/editing-toolbar";
 
+export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 export default async function Home(props: {
