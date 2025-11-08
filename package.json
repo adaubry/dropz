@@ -81,7 +81,7 @@
     "@types/react": "npm:types-react@19.0.0-rc.1",
     "@types/react-dom": "npm:types-react-dom@19.0.0-rc.1",
     "@vitest/ui": "^4.0.8",
-    "drizzle-kit": "^0.31.5",
+    "drizzle-kit": "^0.31.6",
     "eslint": "^8.57.1",
     "eslint-config-next": "15.0.0-rc.1",
     "playwright": "^1.56.1",
