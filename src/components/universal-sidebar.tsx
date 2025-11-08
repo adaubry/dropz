@@ -86,8 +86,8 @@ export function UniversalSidebar({ parentLink, currentItems }: UniversalSidebarP
 
   return (
     <aside className="fixed left-0 hidden w-64 min-w-64 max-w-64 border-r md:block h-[calc(100vh-113px)] top-[113px]">
-      <ScrollArea className="h-full w-full">
-        <div className="p-4">
+      <ScrollArea className="h-full w-full" scrollBarSide="left">
+        <div className="p-4 pl-7">{/* Add left padding to account for scrollbar on left */}
           {/* Parent link (n-1) - just a back button */}
           {parentLink && (
             <div className="mb-2">
