@@ -19,6 +19,7 @@ import Image from "next/image";
 import { EditingToolbar } from "@/components/editing-toolbar";
 import { EditableCard } from "@/components/editable-card";
 import { EditableMarkdown } from "@/components/editable-markdown";
+import { FolderIndexContent } from "@/components/folder-index-content";
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -142,6 +143,9 @@ export default async function DynamicPage({
             </p>
           )}
         </div>
+
+        {/* Show root index page (page.md) if exists */}
+        <FolderIndexContent planetId={planetData.id} namespace="" />
 
         {children.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -303,16 +307,8 @@ export default async function DynamicPage({
         )}
       </div>
 
-      {/* Show index content if exists (Problem 2 solution) */}
-      {node.is_index && node.content && (
-        <div className="mb-8 prose prose-lg dark:prose-invert max-w-none">
-          {node.parsed_html ? (
-            <div dangerouslySetInnerHTML={{ __html: node.parsed_html }} />
-          ) : (
-            <div>{node.content}</div>
-          )}
-        </div>
-      )}
+      {/* Show folder index page (page.md) if exists */}
+      <FolderIndexContent planetId={planetData.id} namespace={namespace} />
 
       {/* Show children - works at any depth (Problem 7 solution) */}
       {children.length > 0 ? (

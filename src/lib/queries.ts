@@ -719,6 +719,28 @@ export async function getFoldersInNamespace(
   return getNodeChildren(planetId, namespace, "folder");
 }
 
+/**
+ * Get the index page (page.md) for a folder
+ *
+ * Looks for a file named "page" in the given namespace
+ * This allows folders to have an introductory/overview page
+ *
+ * Example: /guides folder can have /guides/page.md which displays first
+ */
+export async function getFolderIndexPage(
+  planetId: number,
+  namespace: string
+): Promise<Node | null> {
+  return await db.query.nodes.findFirst({
+    where: and(
+      eq(nodes.planet_id, planetId),
+      eq(nodes.namespace, namespace),
+      eq(nodes.slug, "page"),
+      eq(nodes.type, "file")
+    ),
+  });
+}
+
 // ============================================
 // BACKWARD COMPATIBILITY (Deprecated)
 // ============================================

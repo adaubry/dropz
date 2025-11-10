@@ -148,6 +148,25 @@ const testCases: TestCase[] = [
       ],
     },
   },
+  {
+    name: "Drop folder with page.md index file",
+    currentPath: [],
+    files: [
+      { name: "page.md", relativePath: "guides/page.md" },
+      { name: "setup.md", relativePath: "guides/setup.md" },
+      { name: "faq.md", relativePath: "guides/faq.md" },
+    ],
+    expected: {
+      folders: [
+        { slug: "guides", namespace: "" },
+      ],
+      files: [
+        { slug: "page", namespace: "guides" },
+        { slug: "setup", namespace: "guides" },
+        { slug: "faq", namespace: "guides" },
+      ],
+    },
+  },
 ];
 
 let totalTests = 0;
@@ -251,6 +270,14 @@ for (const testCase of testCases) {
   // Verify UI would display correctly
   console.log("\n🖥️  UI Display Verification:");
   console.log("  Pages that would show these cards:");
+
+  // Check for page.md files
+  const hasPageMd = actualFiles.some((f) => f.slug === "page");
+  if (hasPageMd) {
+    const pageMdNamespace = actualFiles.find((f) => f.slug === "page")?.namespace;
+    console.log(`  💡 Note: "page.md" found in namespace "${pageMdNamespace}"`);
+    console.log(`      This will display as introductory content at the top of the folder page`);
+  }
 
   // Root page
   const rootFolders = actualFolders.filter((f) => f.namespace === "");
