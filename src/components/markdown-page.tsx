@@ -4,6 +4,7 @@ import { constants } from 'fs'
 import { compileMDX } from 'next-mdx-remote/rsc'
 import remarkGfm from 'remark-gfm'
 import rehypeHighlight from 'rehype-highlight'
+import { remarkLogseq } from '@/lib/remark-logseq'
 import { MDXContent } from './mdx-component'
 import { useMDXComponents } from './mdx-component'
 
@@ -80,13 +81,13 @@ export async function MarkdownPage({
     // Pre-process markdown to fix HTML self-closing tags for MDX compatibility
     source = preprocessMarkdownForMDX(source)
 
-    // Compile MDX with performance optimizations
+    // Compile MDX with Logseq support and performance optimizations
     const { content, frontmatter } = await compileMDX({
       source,
       options: {
         parseFrontmatter: true,
         mdxOptions: {
-          remarkPlugins: [remarkGfm],
+          remarkPlugins: [remarkGfm, remarkLogseq],
           rehypePlugins: [rehypeHighlight],
           development: process.env.NODE_ENV === 'development',
         },
@@ -190,7 +191,7 @@ export async function getCompiledMarkdown(filePath: string = 'README.md') {
       options: {
         parseFrontmatter: true,
         mdxOptions: {
-          remarkPlugins: [remarkGfm],
+          remarkPlugins: [remarkGfm, remarkLogseq],
           rehypePlugins: [rehypeHighlight],
         },
       },

@@ -190,3 +190,225 @@ textarea {
 .hljs-strong {
   font-weight: bold;
 }
+
+/* Logseq Components Styling */
+
+/* Highlight ==text== */
+.logseq-highlight {
+  background: linear-gradient(
+    to bottom,
+    transparent 50%,
+    #fef08a 50%,
+    #fef08a 85%,
+    transparent 85%
+  );
+  padding: 0 2px;
+  font-weight: 500;
+}
+
+.dark .logseq-highlight {
+  background: linear-gradient(
+    to bottom,
+    transparent 50%,
+    #854d0e 50%,
+    #854d0e 85%,
+    transparent 85%
+  );
+}
+
+/* Page References [[page]] */
+.logseq-page-ref {
+  @apply inline-flex items-center px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors cursor-pointer font-medium text-sm;
+  border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+.dark .logseq-page-ref {
+  @apply bg-blue-900/30 text-blue-300 hover:bg-blue-900/50;
+  border-color: rgba(147, 197, 253, 0.2);
+}
+
+.logseq-page-ref::before {
+  content: "[[";
+  opacity: 0.5;
+  margin-right: 2px;
+}
+
+.logseq-page-ref::after {
+  content: "]]";
+  opacity: 0.5;
+  margin-left: 2px;
+}
+
+/* Block References ((block-id)) */
+.logseq-block-ref {
+  @apply inline-flex items-center px-2 py-0.5 rounded-md bg-purple-50 text-purple-700 hover:bg-purple-100 transition-colors cursor-pointer text-sm font-mono;
+  border: 1px solid rgba(147, 51, 234, 0.2);
+}
+
+.dark .logseq-block-ref {
+  @apply bg-purple-900/30 text-purple-300 hover:bg-purple-900/50;
+  border-color: rgba(216, 180, 254, 0.2);
+}
+
+/* Task Markers */
+.logseq-task {
+  @apply inline-flex items-center px-2 py-1 rounded-md font-semibold text-xs uppercase tracking-wide;
+}
+
+.logseq-task[data-status="todo"] {
+  @apply bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300;
+}
+
+.logseq-task[data-status="doing"] {
+  @apply bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300;
+}
+
+.logseq-task[data-status="done"] {
+  @apply bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300;
+}
+
+.logseq-task[data-status="later"] {
+  @apply bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300;
+}
+
+.logseq-task[data-status="now"] {
+  @apply bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300;
+}
+
+/* Priority Tags */
+.logseq-priority {
+  @apply inline-flex items-center px-2 py-0.5 rounded font-bold text-xs;
+}
+
+.logseq-priority[data-priority="A"] {
+  @apply bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300;
+}
+
+.logseq-priority[data-priority="B"] {
+  @apply bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300;
+}
+
+.logseq-priority[data-priority="C"] {
+  @apply bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300;
+}
+
+/* Properties */
+.logseq-property {
+  @apply flex items-start gap-2 p-3 my-2 rounded-lg bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700;
+}
+
+.logseq-property-key {
+  @apply font-semibold text-gray-700 dark:text-gray-300;
+}
+
+.logseq-property-key::after {
+  content: "::";
+  @apply ml-1 text-gray-400;
+}
+
+.logseq-property-value {
+  @apply text-gray-600 dark:text-gray-400;
+}
+
+/* Embeds */
+.logseq-embed {
+  @apply my-4 p-4 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/30;
+}
+
+.logseq-embed-header {
+  @apply font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2;
+}
+
+.logseq-embed-header::before {
+  content: "📄";
+}
+
+/* YouTube Embeds */
+.logseq-youtube {
+  @apply relative my-6 rounded-lg overflow-hidden;
+  padding-bottom: 56.25%; /* 16:9 aspect ratio */
+  height: 0;
+}
+
+.logseq-youtube iframe {
+  @apply absolute top-0 left-0 w-full h-full border-0 rounded-lg;
+}
+
+/* Callouts/Admonitions */
+.logseq-callout {
+  @apply my-4 p-4 rounded-lg border-l-4;
+}
+
+.logseq-callout-title {
+  @apply font-bold text-sm uppercase tracking-wide mb-2 flex items-center gap-2;
+}
+
+.logseq-callout-content {
+  @apply text-sm;
+}
+
+.logseq-callout[data-callout-type="note"],
+.logseq-callout[data-callout-type="info"] {
+  @apply bg-blue-50 border-blue-500 dark:bg-blue-950/30 dark:border-blue-500;
+}
+
+.logseq-callout[data-callout-type="note"] .logseq-callout-title,
+.logseq-callout[data-callout-type="info"] .logseq-callout-title {
+  @apply text-blue-700 dark:text-blue-400;
+}
+
+.logseq-callout[data-callout-type="note"] .logseq-callout-title::before,
+.logseq-callout[data-callout-type="info"] .logseq-callout-title::before {
+  content: "ℹ️";
+}
+
+.logseq-callout[data-callout-type="tip"],
+.logseq-callout[data-callout-type="success"] {
+  @apply bg-green-50 border-green-500 dark:bg-green-950/30 dark:border-green-500;
+}
+
+.logseq-callout[data-callout-type="tip"] .logseq-callout-title,
+.logseq-callout[data-callout-type="success"] .logseq-callout-title {
+  @apply text-green-700 dark:text-green-400;
+}
+
+.logseq-callout[data-callout-type="tip"] .logseq-callout-title::before {
+  content: "💡";
+}
+
+.logseq-callout[data-callout-type="success"] .logseq-callout-title::before {
+  content: "✅";
+}
+
+.logseq-callout[data-callout-type="warning"],
+.logseq-callout[data-callout-type="caution"] {
+  @apply bg-amber-50 border-amber-500 dark:bg-amber-950/30 dark:border-amber-500;
+}
+
+.logseq-callout[data-callout-type="warning"] .logseq-callout-title,
+.logseq-callout[data-callout-type="caution"] .logseq-callout-title {
+  @apply text-amber-700 dark:text-amber-400;
+}
+
+.logseq-callout[data-callout-type="warning"] .logseq-callout-title::before,
+.logseq-callout[data-callout-type="caution"] .logseq-callout-title::before {
+  content: "⚠️";
+}
+
+.logseq-callout[data-callout-type="important"],
+.logseq-callout[data-callout-type="danger"] {
+  @apply bg-red-50 border-red-500 dark:bg-red-950/30 dark:border-red-500;
+}
+
+.logseq-callout[data-callout-type="important"] .logseq-callout-title,
+.logseq-callout[data-callout-type="danger"] .logseq-callout-title {
+  @apply text-red-700 dark:text-red-400;
+}
+
+.logseq-callout[data-callout-type="important"] .logseq-callout-title::before {
+  content: "❗";
+}
+
+.logseq-callout[data-callout-type="danger"] .logseq-callout-title::before {
+  content: "🚨";
+}
