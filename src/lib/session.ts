@@ -3,6 +3,14 @@ import { compare, hash } from "bcryptjs";
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 
+// Validate AUTH_SECRET exists
+if (!process.env.AUTH_SECRET) {
+  throw new Error(
+    "AUTH_SECRET environment variable is not set. Please add it to your .env file.\n" +
+    "Generate one with: openssl rand -base64 32"
+  );
+}
+
 const key = new TextEncoder().encode(process.env.AUTH_SECRET);
 const SALT_ROUNDS = 10;
 

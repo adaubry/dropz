@@ -55,28 +55,37 @@ git push origin your-branch-name
    - **Build Command:** (auto-detected)
    - **Output Directory:** (auto-detected)
 
-### Add Environment Variables
+### Add Environment Variables (REQUIRED)
 
 7. Click **"Environment Variables"** section
-8. Add these variables:
+8. Add these **REQUIRED** variables:
 
-```env
-POSTGRES_URL=postgresql://user:pass@host/db?sslmode=require
+**POSTGRES_URL** (from Neon dashboard):
 ```
-*(Paste your Neon connection string from Step 1)*
+postgresql://user:pass@host/db?sslmode=require
+```
 
-**Additional variables you might need:**
+**AUTH_SECRET** (generate with command below):
+```bash
+# Run this command locally to generate a secure secret
+openssl rand -base64 32
+```
+Copy the output and paste it as the value for `AUTH_SECRET`
+
+**Example in Vercel UI:**
+```
+Key: POSTGRES_URL
+Value: postgresql://neondb_owner:abc123@ep-cool-name.aws.neon.tech/neondb?sslmode=require
+
+Key: AUTH_SECRET
+Value: (paste your generated secret here)
+```
+
+**Optional variables:**
 
 ```env
-# Session/Auth (generate random strings)
-AUTH_SECRET=your-random-secret-here
-
-# Next.js
+# Next.js (optional)
 NEXT_PUBLIC_APP_URL=https://your-app.vercel.app
-
-# Optional: Rate limiting (if using Upstash)
-UPSTASH_REDIS_REST_URL=your-upstash-url
-UPSTASH_REDIS_REST_TOKEN=your-upstash-token
 ```
 
 9. Click **"Deploy"**
@@ -111,26 +120,7 @@ pnpm drizzle-kit push
 
 ---
 
-## Step 5: Generate Auth Secret
-
-If your app uses authentication, generate a secure random secret:
-
-```bash
-# Generate random secret
-openssl rand -base64 32
-```
-
-Copy the output and add it to Vercel:
-
-1. Go to Vercel Dashboard → Your Project
-2. Click **"Settings"** → **"Environment Variables"**
-3. Add `AUTH_SECRET` with the generated value
-4. Click **"Save"**
-5. **Redeploy** the project (go to Deployments → Click "..." → Redeploy)
-
----
-
-## Step 6: Verify Deployment
+## Step 5: Verify Deployment
 
 1. Open your deployed URL (e.g., `https://dropz-xyz.vercel.app`)
 2. Test sign up / login
@@ -141,6 +131,17 @@ Copy the output and add it to Vercel:
 ---
 
 ## Common Issues & Fixes
+
+### Issue: "AUTH_SECRET environment variable is not set"
+
+**Fix:** Generate and add AUTH_SECRET:
+```bash
+# Generate secret
+openssl rand -base64 32
+```
+- Go to Vercel → Settings → Environment Variables
+- Add `AUTH_SECRET` with the generated value
+- Redeploy the project
 
 ### Issue: "Database connection failed"
 
