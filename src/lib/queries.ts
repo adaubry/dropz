@@ -780,18 +780,21 @@ export async function getFoldersInNamespace(
 }
 
 /**
- * Get the index page (page.md) for a folder
+ * Get the index page (page.md or readme.md) for a folder
  *
- * Looks for a file named "page" in the given namespace
+ * Looks for a file named "page" or "readme" in the given namespace
  * This allows folders to have an introductory/overview page
  *
- * Example: /guides folder can have /guides/page.md which displays first
+ * Priority: page.md > readme.md (case insensitive)
+ *
+ * Example: /guides folder can have /guides/page.md or /guides/README.md
  */
 export async function getFolderIndexPage(
   planetId: number,
   namespace: string
 ): Promise<Node | null> {
-  return await db.query.nodes.findFirst({
+  // First try to find page.md
+  const pageMd = await db.query.nodes.findFirst({
     where: and(
       eq(nodes.planet_id, planetId),
       eq(nodes.namespace, namespace),
@@ -799,6 +802,20 @@ export async function getFolderIndexPage(
       eq(nodes.type, "file")
     ),
   });
+
+  if (pageMd) return pageMd;
+
+  // If no page.md, try readme.md (case insensitive)
+  const readmeMd = await db.query.nodes.findFirst({
+    where: and(
+      eq(nodes.planet_id, planetId),
+      eq(nodes.namespace, namespace),
+      sql`LOWER(${nodes.slug}) = 'readme'`,
+      eq(nodes.type, "file")
+    ),
+  });
+
+  return readmeMd;
 }
 
 // ============================================

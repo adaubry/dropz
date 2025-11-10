@@ -20,6 +20,7 @@ import { EditingToolbar } from "@/components/editing-toolbar";
 import { EditableCard } from "@/components/editable-card";
 import { EditableMarkdown } from "@/components/editable-markdown";
 import { FolderIndexContent } from "@/components/folder-index-content";
+import { EditablePlanetTitle } from "@/components/editable-planet-title";
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -135,14 +136,7 @@ export default async function DynamicPage({
           id="main-content"
         >
           <div className="container mx-auto p-4 max-w-7xl">
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold mb-2">🌍 {planetData.name}</h1>
-          {planetData.description && (
-            <p className="text-gray-600 dark:text-gray-400 text-lg">
-              {planetData.description}
-            </p>
-          )}
-        </div>
+        <EditablePlanetTitle planet={planetData} isEditing={isEditingActive} />
 
         {/* Show root index page (page.md) if exists */}
         <FolderIndexContent planetId={planetData.id} namespace="" />

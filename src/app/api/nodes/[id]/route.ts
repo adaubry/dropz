@@ -102,6 +102,9 @@ export async function PUT(
     const body = await request.json();
     const { title, slug, content, metadata, order } = body;
 
+    // Check if slug is changing
+    const slugChanged = slug && slug !== existingNode.slug;
+
     // Process content if it's markdown
     let parsedHtml = existingNode.parsed_html;
     let processedMetadata = metadata || existingNode.metadata;
@@ -115,12 +118,55 @@ export async function PUT(
       // TODO: Parse markdown to HTML here
     }
 
+    // If slug changed, we need to cascade updates to children
+    if (slugChanged && existingNode.type === "folder") {
+      // Calculate old and new full paths
+      const oldFullPath = existingNode.namespace
+        ? `${existingNode.namespace}/${existingNode.slug}`
+        : existingNode.slug;
+      const newFullPath = existingNode.namespace
+        ? `${existingNode.namespace}/${slug}`
+        : slug;
+
+      // Get all children (nodes with namespace starting with old path)
+      const children = await db.query.nodes.findMany({
+        where: eq(nodes.planet_id, existingNode.planet_id),
+      });
+
+      // Update all affected children
+      for (const child of children) {
+        // Check if this child's namespace starts with the old path
+        if (child.namespace === oldFullPath || child.namespace.startsWith(oldFullPath + "/")) {
+          const newNamespace = child.namespace.replace(oldFullPath, newFullPath);
+          const newFilePath = child.file_path.replace(oldFullPath, newFullPath);
+
+          await db
+            .update(nodes)
+            .set({
+              namespace: newNamespace,
+              file_path: newFilePath,
+              updated_at: new Date(),
+            })
+            .where(eq(nodes.id, child.id));
+        }
+      }
+    }
+
+    // Calculate new file_path if slug changed
+    let newFilePath = existingNode.file_path;
+    if (slugChanged) {
+      const pathParts = existingNode.file_path.split("/");
+      pathParts[pathParts.length - 1] = slug;
+      newFilePath = pathParts.join("/");
+    }
+
     // Update the node
     const [updatedNode] = await db
       .update(nodes)
       .set({
         title: title || existingNode.title,
         slug: slug || existingNode.slug,
+        file_path: newFilePath,
         content: content || existingNode.content,
         parsed_html: parsedHtml,
         metadata: processedMetadata,

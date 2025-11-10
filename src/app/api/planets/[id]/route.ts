@@ -52,31 +52,36 @@ export async function PUT(
     }
 
     const body = await request.json();
-    const { name, slug } = body;
+    const { name, slug, description } = body;
 
-    if (!name || !slug) {
+    if (!name) {
       return NextResponse.json(
-        { error: "Name and slug are required" },
+        { error: "Name is required" },
         { status: 400 }
       );
     }
 
-    // Validate slug format
-    if (!/^[a-z0-9-]+$/.test(slug)) {
+    // Validate slug format if provided
+    if (slug && !/^[a-z0-9-]+$/.test(slug)) {
       return NextResponse.json(
         { error: "Slug must contain only lowercase letters, numbers, and hyphens" },
         { status: 400 }
       );
     }
 
+    // Build update object
+    const updateData: any = {
+      name,
+      updated_at: new Date(),
+    };
+
+    if (slug) updateData.slug = slug;
+    if (description !== undefined) updateData.description = description;
+
     // Update the planet
     const [updatedPlanet] = await db
       .update(planets)
-      .set({
-        name,
-        slug,
-        updated_at: new Date(),
-      })
+      .set(updateData)
       .where(eq(planets.id, planetId))
       .returning();
 
