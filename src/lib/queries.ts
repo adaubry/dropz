@@ -68,14 +68,26 @@ export async function getUser() {
 }
 
 /**
- * Get user's workspace (planet)
- * Each user has ONE workspace
+ * Get user's primary workspace (planet)
+ * Returns the first planet created by the user
  */
 export async function getUserWorkspace(userId: number): Promise<Planet | null> {
   const workspace = await db.query.planets.findFirst({
     where: eq(planets.user_id, userId),
+    orderBy: (planets, { asc }) => [asc(planets.created_at)],
   });
   return workspace || null;
+}
+
+/**
+ * Get all planets owned by a user
+ * Users can have multiple planets
+ */
+export async function getUserPlanets(userId: number): Promise<Planet[]> {
+  return await db.query.planets.findMany({
+    where: eq(planets.user_id, userId),
+    orderBy: (planets, { asc }) => [asc(planets.created_at)],
+  });
 }
 
 /**
@@ -102,6 +114,54 @@ export async function ensureUserWorkspace(userId: number, username: string): Pro
   }
 
   return workspace;
+}
+
+/**
+ * Create a new planet for a user
+ * Users can have multiple planets
+ */
+export async function createPlanet(
+  userId: number,
+  data: { name: string; slug: string; description?: string }
+): Promise<Planet> {
+  // Check if slug is already taken
+  const existing = await db.query.planets.findFirst({
+    where: eq(planets.slug, data.slug),
+  });
+
+  if (existing) {
+    throw new Error(`Planet slug "${data.slug}" is already taken`);
+  }
+
+  const [planet] = await db
+    .insert(planets)
+    .values({
+      name: data.name,
+      slug: data.slug,
+      description: data.description || "",
+      user_id: userId,
+    })
+    .returning();
+
+  return planet;
+}
+
+/**
+ * Delete a planet and all its content
+ * Only the owner can delete their planet
+ */
+export async function deletePlanet(planetId: number, userId: number): Promise<void> {
+  // Verify ownership
+  const planet = await db.query.planets.findFirst({
+    where: and(eq(planets.id, planetId), eq(planets.user_id, userId)),
+  });
+
+  if (!planet) {
+    throw new Error("Planet not found or you don't have permission to delete it");
+  }
+
+  // Delete will cascade to nodes, editing sessions, etc.
+  await db.delete(planets).where(eq(planets.id, planetId));
 }
 
 /**
