@@ -18,6 +18,52 @@ import type { Root, Text, Paragraph, Html } from 'mdast'
  */
 export function remarkLogseq() {
   return (tree: Root) => {
+    // First, handle YouTube embeds in paragraphs (before text gets split by URL parsing)
+    visit(tree, 'paragraph', (node: Paragraph, index, parent) => {
+      if (!parent || index === null || index === undefined) return
+
+      // Try to reconstruct text from all children to match YouTube syntax
+      let fullText = ''
+      node.children.forEach((child: any) => {
+        if (child.type === 'text') {
+          fullText += child.value
+        } else if (child.type === 'link') {
+          fullText += child.url
+        }
+      })
+
+      // Check if this paragraph contains YouTube syntax
+      const youtubeMatch = fullText.match(/^{{youtube\s+(https?:\/\/[^\s}]+)}}$/)
+      if (youtubeMatch) {
+        const url = youtubeMatch[1]
+        let videoId = ''
+
+        // Extract video ID from various YouTube URL formats
+        const ytRegex =
+          /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/
+        const ytMatch = url.match(ytRegex)
+        if (ytMatch) {
+          videoId = ytMatch[1]
+        }
+
+        // Replace entire paragraph with YouTube embed HTML
+        const html = {
+          type: 'html',
+          value: `<div class="logseq-youtube" data-video-id="${videoId}">
+                <iframe
+                  src="https://www.youtube.com/embed/${videoId}"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowfullscreen
+                ></iframe>
+              </div>`,
+        }
+
+        parent.children.splice(index, 1, html as any)
+        return index + 1
+      }
+    })
+
+    // Then process text nodes for other Logseq syntax
     visit(tree, 'text', (node: Text, index, parent) => {
       if (!parent || index === null) return
 
@@ -41,9 +87,9 @@ export function remarkLogseq() {
         value,
       })
 
-      // Combined regex for all Logseq syntax
+      // Combined regex for all Logseq syntax (except YouTube which is handled separately)
       const logseqRegex =
-        /==([^=]+)==|\[\[([^\]]+)\]\]|\(\(([^)]+)\)\)|\[#([ABC])\]|{{embed\s+\[\[([^\]]+)\]\]}}|{{embed\s+\(\(([^)]+)\)\)}}|{{youtube\s+([^}]+)}}|TODO|DOING|DONE|LATER|NOW|(\w+)::\s*([^\n]+)|([A-Za-z0-9_]+)\^{([^}]+)}|([A-Za-z0-9_]+)_{([^}]+)}/g
+        /==([^=]+)==|\[\[([^\]]+)\]\]|\(\(([^)]+)\)\)|\[#([ABC])\]|{{embed\s+\[\[([^\]]+)\]\]}}|{{embed\s+\(\(([^)]+)\)\)}}|TODO|DOING|DONE|LATER|NOW|(\w+)::\s*([^\n]+)|([A-Za-z0-9_]+)\^{([^}]+)}|([A-Za-z0-9_]+)_{([^}]+)}/g
 
       let match
       while ((match = logseqRegex.exec(text)) !== null) {
@@ -102,32 +148,8 @@ export function remarkLogseq() {
             )
           )
         }
-        // YouTube embed {{youtube URL}}
-        else if (match[7]) {
-          const url = match[7].trim()
-          let videoId = ''
-
-          // Extract video ID from various YouTube URL formats
-          const ytRegex =
-            /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/
-          const ytMatch = url.match(ytRegex)
-          if (ytMatch) {
-            videoId = ytMatch[1]
-          }
-
-          parts.push(
-            createHtml(
-              `<div class="logseq-youtube" data-video-id="${videoId}">
-                <iframe
-                  src="https://www.youtube.com/embed/${videoId}"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowfullscreen
-                ></iframe>
-              </div>`
-            )
-          )
-        }
         // Task markers (TODO, DOING, DONE, LATER, NOW)
+        // Note: YouTube embeds are handled separately in the paragraph visitor
         else if (
           match[0] === 'TODO' ||
           match[0] === 'DOING' ||
@@ -142,23 +164,23 @@ export function remarkLogseq() {
           )
         }
         // Properties property:: value
-        else if (match[8] && match[9]) {
+        else if (match[7] && match[8]) {
           parts.push(
             createHtml(
               `<div class="logseq-property">
-                <span class="logseq-property-key">${match[8]}</span>
-                <span class="logseq-property-value">${match[9]}</span>
+                <span class="logseq-property-key">${match[7]}</span>
+                <span class="logseq-property-value">${match[8]}</span>
               </div>`
             )
           )
         }
         // Superscript X^{super}
-        else if (match[10] && match[11]) {
-          parts.push(createHtml(`${match[10]}<sup>${match[11]}</sup>`))
+        else if (match[9] && match[10]) {
+          parts.push(createHtml(`${match[9]}<sup>${match[10]}</sup>`))
         }
         // Subscript X_{sub}
-        else if (match[12] && match[13]) {
-          parts.push(createHtml(`${match[12]}<sub>${match[13]}</sub>`))
+        else if (match[11] && match[12]) {
+          parts.push(createHtml(`${match[11]}<sub>${match[12]}</sub>`))
         }
 
         lastIndex = match.index + match[0].length

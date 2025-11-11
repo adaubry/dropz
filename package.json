@@ -63,6 +63,7 @@
     "react-dom": "19.0.0-rc-cd22717c-20241013",
     "react-scan": "^0.0.35",
     "rehype-highlight": "^7.0.2",
+    "rehype-raw": "^7.0.0",
     "rehype-stringify": "^10.0.1",
     "remark-gfm": "^4.0.1",
     "remark-parse": "^11.0.0",

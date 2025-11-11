@@ -288,14 +288,17 @@ async function markdownToHtml(markdown: string): Promise<string> {
     const { default: remarkGfm } = await import("remark-gfm");
     const { remarkLogseq } = await import("@/lib/remark-logseq");
     const { default: remarkRehype } = await import("remark-rehype");
+    const { default: rehypeRaw } = await import("rehype-raw");
     const { default: rehypeHighlight } = await import("rehype-highlight");
     const { default: rehypeStringify } = await import("rehype-stringify");
 
     const result = await unified()
       .use(remarkParse)
-      .use(remarkGfm)
+      // remarkLogseq must run before remarkGfm to prevent autolink from interfering
       .use(remarkLogseq)
+      .use(remarkGfm)
       .use(remarkRehype, { allowDangerousHtml: true })
+      .use(rehypeRaw) // Process raw HTML from remark-logseq
       .use(rehypeHighlight)
       .use(rehypeStringify, { allowDangerousHtml: true })
       .process(markdown);
