@@ -8,7 +8,7 @@ export const nodes = pgTable("nodes", {
 	planetId: integer("planet_id").notNull(),
 	slug: text().notNull(),
 	title: text().notNull(),
-	namespace: text().default(').notNull(),
+	namespace: text().default('').notNull(),
 	depth: integer().notNull(),
 	filePath: text("file_path").notNull(),
 	type: text().notNull(),

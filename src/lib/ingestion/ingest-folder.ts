@@ -277,15 +277,16 @@ async function generateVirtualFolders(planetId: number) {
 }
 
 /**
- * Simple markdown to HTML converter
- * For production, we'll use remark/rehype pipeline
+ * Markdown to HTML converter with Logseq support
+ * Uses the same processing pipeline as the markdown-page component
  */
 async function markdownToHtml(markdown: string): Promise<string> {
   try {
-    // Use the same preprocessing as the markdown-page component
+    // Import all required plugins
     const { unified } = await import("unified");
     const { default: remarkParse } = await import("remark-parse");
     const { default: remarkGfm } = await import("remark-gfm");
+    const { remarkLogseq } = await import("@/lib/remark-logseq");
     const { default: remarkRehype } = await import("remark-rehype");
     const { default: rehypeHighlight } = await import("rehype-highlight");
     const { default: rehypeStringify } = await import("rehype-stringify");
@@ -293,9 +294,10 @@ async function markdownToHtml(markdown: string): Promise<string> {
     const result = await unified()
       .use(remarkParse)
       .use(remarkGfm)
-      .use(remarkRehype)
+      .use(remarkLogseq)
+      .use(remarkRehype, { allowDangerousHtml: true })
       .use(rehypeHighlight)
-      .use(rehypeStringify)
+      .use(rehypeStringify, { allowDangerousHtml: true })
       .process(markdown);
 
     return String(result);
