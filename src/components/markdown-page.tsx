@@ -4,6 +4,7 @@ import { constants } from 'fs'
 import { compileMDX } from 'next-mdx-remote/rsc'
 import remarkGfm from 'remark-gfm'
 import rehypeHighlight from 'rehype-highlight'
+import rehypeRaw from 'rehype-raw'
 import { remarkLogseq } from '@/lib/remark-logseq'
 import { MDXContent } from './mdx-component'
 import { useMDXComponents } from './mdx-component'
@@ -87,8 +88,10 @@ export async function MarkdownPage({
       options: {
         parseFrontmatter: true,
         mdxOptions: {
-          remarkPlugins: [remarkGfm, remarkLogseq],
-          rehypePlugins: [rehypeHighlight],
+          // remarkLogseq must run before remarkGfm to prevent autolink from interfering
+          remarkPlugins: [remarkLogseq, remarkGfm],
+          // rehypeRaw must come before rehypeHighlight to preserve HTML from remark-logseq
+          rehypePlugins: [rehypeRaw as any, rehypeHighlight],
           development: process.env.NODE_ENV === 'development',
         },
       },
@@ -191,8 +194,10 @@ export async function getCompiledMarkdown(filePath: string = 'README.md') {
       options: {
         parseFrontmatter: true,
         mdxOptions: {
-          remarkPlugins: [remarkGfm, remarkLogseq],
-          rehypePlugins: [rehypeHighlight],
+          // remarkLogseq must run before remarkGfm to prevent autolink from interfering
+          remarkPlugins: [remarkLogseq, remarkGfm],
+          // rehypeRaw must come before rehypeHighlight to preserve HTML from remark-logseq
+          rehypePlugins: [rehypeRaw as any, rehypeHighlight],
         },
       },
       components: useMDXComponents({}),
