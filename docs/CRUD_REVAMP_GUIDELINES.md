@@ -1,249 +1,147 @@
-# **Migration from Log-Based to Patch-Based Versioning**
+Migration from Log-Based to Patch-Based Versioning
+Project Overview
 
-## **Project Overview**
+Goal:
+Migrate the existing system from a log-based (event sourcing) versioning system to a patch-based, diff-centric system that enables efficient navigation between versions, simplified rollback, and better diff visualization, using diff-match-patch as the core engine.
 
-**Goal:**  
- Migrate the existing system that currently relies on a **log-based (event sourcing)** versioning system to a **patch-based (diff \+ snapshot)** system that enables efficient navigation between versions, simplified rollback, and better diff visualization.
+Motivation:
 
-**Motivation:**  
- The current log-based system focuses on “what happened” (semantic events) but complicates version reconstruction and rollback.  
- The new patch-based system will focus on “what changed” (syntactic diffs between versions), improving user experience and storage efficiency.
+The current log-based system focuses on “what happened” (semantic events) but complicates version reconstruction, rollback, and diff visualization.
 
----
+The new patch-based system will focus on “what changed”, improving user experience, storage efficiency, and integrity of edits.
 
-## **1\. 📂 Current State Analysis (Log-Based System)**
+1️⃣ Current State Analysis (Log-Based System)
+1.1 Architecture Overview
 
-### **1.1 Architecture Overview**
+Storage model: Each version represented as an ordered sequence of events (CREATE_DOC, EDIT_PARAGRAPH, DELETE_BLOCK, etc.).
 
-* **Storage model:** Each version represented as an ordered sequence of *events* (e.g. `CREATE_DOC`, `EDIT_PARAGRAPH`, `DELETE_BLOCK`, etc.).
+Version reconstruction: Derived by replaying all events sequentially.
 
-* **Version reconstruction:** Derived by replaying all events sequentially
+1.2 Known Issues
 
-### **1.2 Known Issues**
+Slow version reconstruction as documents and folders grow.
 
-* Slow version reconstruction as documents grow.
+Difficult rollback or branching.
 
-* Difficult rollback or branching.
+Hard to compute or visualize diffs between versions.
 
-* Hard to compute or visualize diffs between versions.
+Redundant event chains increase storage load.
 
-* Redundant event chains increasing storage load.
+2️⃣ New Core Idea
 
----
+Our app serves files organized in folders, which can be nested. We want to track changes without storing full copies of everything for each edit.
 
-## **1️⃣New Core Idea**
+Conceptual Solution
 
-### 
+Keep only what is necessary to represent changes.
 
-In our app, we serve **files organized in folders**, which can be nested. we want to **track changes over time** without storing full copies of everything for every change.
+Represent each modification as a diff using diff-match-patch, not a full snapshot.
 
-The conceptual solution is:
+Maintain a current tree of all files/folders and a chain of diffs linking all changes — a lightweight blockchain.
 
-1. Keep **only what is necessary** to represent changes.
+CRUD operations are fool-proof by design, restricted to owners, atomic, repeat-safe, and text-only.
 
-2. Represent each modification as a **diff** (what changed), not a full snapshot.
+3️⃣ Privileges Redesign
 
-3. Maintain a **current tree** of all files/folders and a chain of diffs that links all changes — like a lightweight blockchain.
+Workspace ownership model:
 
----
+Only two statuses: owner or non-owner.
 
-## **2️⃣ Key Concepts**
+Owners can edit their workspaces; non-owners can only view.
 
-### **Node (File or Folder)**
+Public view:
 
-* Every file or folder is a **node** in your system.
+All workspaces are viewable by everyone.
 
-* Each node stores:
+On the homepage:
 
-  * Its **type** (file or folder)
+Remove “Sign In” / “Sign Up” buttons.
 
-  * Its **name**
+Display all workspaces (planets) from the database, allowing navigation.
 
-  * Its **location in the hierarchy** (which folder it belongs to)
+If logged in, a link to /profile appears next to the refresh button.
 
-  * For files, the **content**
+CRUD enforcement:
 
-  * The **last modification time**
+Only workspace owners can perform Create, Update, Delete operations.
 
-Folders are mostly metadata containers (name, location, timestamps), while files have actual content.
+All modifications are text-only.
 
----
+All operations are atomic (fully succeed or fully fail).
 
-### **Diff**
+All operations are idempotent (repeat-safe).
 
-A **diff** represents a **single change** to a node:
+4️⃣ Key Concepts
+Node (File or Folder)
 
-* For files: the diff contains only the **minimal difference in content**.
+Each file or folder is a node in the system:
 
-* For folders: the diff might indicate a **rename** or **move** to another folder, DO WHAT YOU WANT
+Type: file or folder
 
-* Other operations include **create** or **delete** for files or folders, or **others**, the whole CRUD thing.
+Name
 
-Each diff also records **who made the change** and **when**.
+Location in hierarchy (parent folder)
 
----
+For files: content
 
-## **3️⃣ Minimal Storage Principle**
+Last modification time
 
-Instead of storing all historical snapshots:
+Folders are mostly metadata containers; files hold text content.
 
-1. Maintain the **current state** of all nodes (the complete current tree).
+Diff
 
-2. Maintain **the previous version** of each modified node (to allow undo/revert).
+A diff represents a single change to a node:
 
-3. Record **the diff that leads to the next change**.
+Files: minimal content changes (diff-match-patch)
 
-In other words, at any moment, you only need **three things per node**:
+Folders: rename or move operations
 
-1. **Current version** — what users see now.
+Other operations: create or delete
 
-2. **Previous version** — backup of the last state for undo.
+Each diff records who made the change and when.
 
-3. **Patch/diff to the next version** — describes the upcoming change.
+5️⃣ Minimal Storage Principle
 
-This forms a **chain of diffs**, similar to a blockchain: every change links backward to the previous state.
+At any moment, each node only stores:
 
----
+Current version: the visible state.
 
-## **4️⃣ How Changes Are Tracked**
+Previous version: backup for undo/revert.
+
+Patch/diff to next version: describes the upcoming change (diff-match-patch).
+
+This forms a chain of diffs, like a blockchain: every change links backward to the previous state.
+
+6️⃣ How Changes Are Tracked
 
 Whenever a user edits a file or moves/renames a folder:
 
-1. **Capture the change as a diff** — only what changed is stored.
+Capture the change as a diff (diff-match-patch).
 
-2. **Update the current state** with the change.
+Update the current state with the change.
 
-3. **Move the current state to the previous state slot** (for potential rollback).
+Move the current state to previous version for rollback.
 
-4. Keep the diff so that the next modification can be linked to it.
+Keep the diff linked to the next modification.
 
-This way, you **never store more than necessary**, but can reconstruct past versions by reversing diffs.
+All changes are minimal, atomic, and text-only, ensuring repeat safety.
 
----
+7️⃣ Version History Mechanics
 
-## **5️⃣ How Version History Works**
+Current version: simply read the current tree.
 
-* To see the **current version**, you simply read the current tree.
+Undo last change: revert previous version into current version and update/remove the diff.
 
-* To **undo the last change**, you revert the previous version into the current version and discard or update the diff.
+Reconstruct past versions: follow the chain of diffs backward and apply in reverse.
 
-* To **reconstruct a past version beyond the previous one**, you can follow the chain of diffs backward, applying them in reverse.
+Folder hierarchy is implicitly tracked via parent IDs. Moves and renames are stored as diffs.
 
-The **folder hierarchy** is implicitly tracked by storing each node’s parent folder, so moving or renaming folders is also just a diff.
-
----
-
-## **6️⃣ Advantages of This Approach**
-
-| Feature | Benefit |
-| ----- | ----- |
-| Minimal storage | Only store current, previous, and patch per node |
-| Full version history | Can reconstruct any past state using the diff chain |
-| Efficient | No need to store full snapshots of entire tree for every edit |
-| Supports hierarchy | Moves and renames are tracked as diffs |
-| Blockchain-like | Each diff links to previous state, ensuring integrity |
-
-# **Testing and Success Plan — Minimal Diff Versioning for Cloud Files**
-
-## **1️⃣ Core Goals for Testing**
-
-The revamp has three main goals:
-
-1. **Correctness:** All diffs accurately capture changes to files or folders, and applying/reversing them reconstructs the correct states.
-
-2. **Integrity:** Folder structure, file content, and metadata remain consistent, even after multiple edits, moves, or deletes.
-
-3. **Performance:** The system efficiently handles diffs, rollback, and reconstruction without excessive memory or storage.
-
----
-
-## **2️⃣ Types of Tests**
-
-### **2.1 Unit Tests**
-
-* **Diff Generation:**
-
-  * Verify that the diff created for a file content change exactly represents the change.
-
-  * Check that a diff applied to the previous content produces the correct current content.
-
-* **Node Updates:**
-
-  * Moving, renaming, creating, deleting nodes produce correct diffs.
-
-  * Ensure parent-child relationships remain consistent for folder moves.
-
-* **Diff Reversal:**
-
-  * Applying a reversed diff returns the node to the previous state.
-
-* **Edge Cases:**
-
-  * Empty files or folders.
-
-  * Large files or deeply nested folders.
-
-  * Multiple simultaneous operations on the same node.
-
----
-
-### **2.2 Integration Tests**
-
-* **Tree Reconstruction:**
-
-  * Apply a chain of diffs sequentially to reconstruct the current state.
-
-  * Reverse the chain to reconstruct previous versions.
-
-* **Hierarchy Integrity:**
-
-  * After moves and renames, paths are correct.
-
-  * No orphaned nodes (every node has a valid parent or is root).
-
-* **Cross-node Operations:**
-
-  * Moving a folder with files preserves all child nodes.
-
-  * Renaming a parent folder updates paths correctly without changing file contents.
-
-* **Concurrent Edits:**
-
-  * Simulate multiple edits in parallel; ensure diffs apply correctly without corrupting state.
-
----
-
-### **2.3 Regression Tests**
-
-* Compare reconstructed states **before and after migration** to ensure fidelity:
-
-  * Original log-based system state \= reconstructed state from diffs.
-
-* Ensure old operations (from logs) are correctly represented in new diff system.
-
----
-
-### **2.4 Performance Tests**
-
-* Measure:
-
-  * Time to reconstruct a full tree from current \+ previous \+ diff chain.
-
-  * Time to apply and reverse diffs for large files and deep folder structures.
-
-  * Storage usage per node for minimal diff system vs old log-based storage.
-
----
-
-## **3️⃣ Success Criteria**
-
-| Aspect | Measure of Success |
-| ----- | ----- |
-| **Correctness** | Every node’s current content matches what the old system would have produced. |
-| **Rollback Accuracy** | Reverting to previous version restores content and folder structure exactly. |
-| **Hierarchy Integrity** | No orphaned or missing nodes; parent-child relationships preserved. |
-| **Diff Fidelity** | Patches can reconstruct all intermediate versions exactly. |
-| **Performance** | Operations (apply diff, rollback, reconstruct tree) remain fast and scalable. |
-| **Storage Efficiency** | Minimal storage used per node (only previous \+ current \+ diff). |
-| **Edge Case Handling** | Empty files, moves of nested folders, and simultaneous edits handled correctly. |
-
+8️⃣ Advantages of This Approach
+Feature Benefit
+Minimal storage Only current, previous, and patch per node
+Full version history Can reconstruct any past state using diff chains
+Efficient No need for full snapshots at every edit
+Supports hierarchy Moves and renames tracked as diffs
+Blockchain-like Each diff links to the previous state, ensuring integrity
+Fool-proof CRUD Atomic, idempotent, text-only, owner-restricted edits
+Diff-centric All operations rely on diff-match-patch for maximal precision
