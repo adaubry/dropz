@@ -14,7 +14,6 @@ Dropz is a modern knowledge management system that transforms markdown files int
 - 📝 Full markdown & MDX support
 - 🗂️ Namespace-based hierarchy (unlimited depth)
 - 👤 User workspaces with editing mode
-- 🔍 Full-text search
 - 📊 Logseq-style markdown support
 
 ### Quick Start
@@ -344,10 +343,6 @@ See [PERFORMANCE_REVAMP.md](./PERFORMANCE_REVAMP.md) for details.
 - `getNodeByPath(planetSlug, pathSegments)` - O(1) path lookup
 - `getNodeChildren(planetId, namespace, type?)` - Get children at level
 - `getNodeBreadcrumbs(node)` - Build breadcrumb trail
-
-**Search:**
-- `searchNodes(planetId, query, limit)` - Full-text search
-- `getSearchResults(searchTerm)` - Global search
 
 **Related:**
 - `getRelatedNodes(nodeId, limit)` - Via node_links

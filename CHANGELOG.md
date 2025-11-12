@@ -12,12 +12,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Modern markdown and MDX guide consolidating all MDX docs
 - Changelog for version tracking
 - Archive directory for historical documentation
+- History-based breadcrumb navigation tracking last pages visited
 
 ### Changed
 - Complete documentation reorganization in `/docs`
 - Updated robots.txt for documentation site (removed e-commerce references)
 - Improved docs/README.md as navigation hub
 - Moved completed migration docs to `/docs/archive`
+- Breadcrumbs now show navigation history (last 3 pages) with ".." home link instead of namespace path
 
 ### Removed
 - Duplicate documentation files from root directory
@@ -26,6 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Commented-out rate limiting code (`rate-limit.ts`)
 - Empty `curriculum/` directory
 - Redundant MDX documentation files (consolidated into single guide)
+- Search feature completely removed (search-dropdown component, search functions, search documentation)
 
 ---
 

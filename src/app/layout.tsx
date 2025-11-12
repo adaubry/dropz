@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { SearchDropdownComponent } from "@/components/search-dropdown";
 import { Suspense } from "react";
 import { AuthServer } from "./auth.server";
 import { Link } from "@/components/ui/link";
@@ -69,14 +68,6 @@ export default async function RootLayout({
                 >
                   Dropz
                 </Link>
-                <div className="items flex w-full flex-row items-center justify-between gap-4">
-                  <div className="mx-0 flex-grow sm:mx-auto sm:flex-grow-0">
-                    <SearchDropdownComponent />
-                  </div>
-                  <div className="flex flex-row justify-between space-x-4">
-
-                  </div>
-                </div>
               </div>
               
             </div>
