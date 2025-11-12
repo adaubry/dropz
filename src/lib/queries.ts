@@ -488,8 +488,10 @@ export async function getNodeChildren(
  * - ["intro"] → finds /intro
  * - ["guides", "setup"] → finds /guides/setup
  * - ["courses", "cs101", "week1", "lecture"] → finds /courses/cs101/week1/lecture
+ * - ["Getting Started"] → finds Logseq page "Getting Started"
  *
- * O(1) lookup via indexed (planet_id, namespace, slug)!
+ * O(1) lookup via indexed (planet_id, namespace, slug) or (planet_id, page_name)!
+ * Supports both Logseq pages (with spaces) and legacy slug-based routing
  * No caching - pages are force-dynamic for editing mode
  */
 export async function getNodeByPath(
@@ -503,14 +505,41 @@ export async function getNodeByPath(
     return null; // Root has no node
   }
 
-  const slug = pathSegments[pathSegments.length - 1];
-  const namespace = pathSegments.slice(0, -1).join("/");
+  // Decode URL segments (handles %20 spaces, etc.)
+  const decodedSegments = pathSegments.map(segment => decodeURIComponent(segment));
 
+  const lastSegment = decodedSegments[decodedSegments.length - 1];
+  const namespace = decodedSegments.slice(0, -1).join("/");
+
+  // Try 1: Match by page_name (for Logseq pages with spaces)
+  // Logseq pages use full namespace path as page_name
+  const pageName = decodedSegments.join("/");
+  const logseqPage = await db.query.nodes.findFirst({
+    where: and(
+      eq(nodes.planet_id, planet.id),
+      eq(nodes.page_name, pageName)
+    ),
+  });
+
+  if (logseqPage) return logseqPage;
+
+  // Try 2: Match by slug (legacy system, URL-safe slugs)
+  const legacyNode = await db.query.nodes.findFirst({
+    where: and(
+      eq(nodes.planet_id, planet.id),
+      eq(nodes.namespace, namespace),
+      eq(nodes.slug, lastSegment)
+    ),
+  });
+
+  if (legacyNode) return legacyNode;
+
+  // Try 3: Case-insensitive slug match (for backwards compatibility)
   return await db.query.nodes.findFirst({
     where: and(
       eq(nodes.planet_id, planet.id),
       eq(nodes.namespace, namespace),
-      eq(nodes.slug, slug)
+      sql`LOWER(${nodes.slug}) = LOWER(${lastSegment})`
     ),
   });
 }
