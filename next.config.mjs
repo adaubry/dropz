@@ -30,6 +30,11 @@ const nextConfig = {
       },
     ],
   },
+  // Performance budgets
+  performance: {
+    maxAssetSize: 244000, // 244 KB
+    maxEntrypointSize: 244000,
+  },
   async rewrites() {
     return [
       {

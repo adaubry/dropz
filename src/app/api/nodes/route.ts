@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidateTag } from "next/cache";
 import { db } from "@/db";
 import { nodes, type NewNode } from "@/db/schema";
 import {
@@ -138,6 +139,7 @@ export async function POST(request: NextRequest) {
       resultNode = newNode;
     }
 
+    revalidateTag("nodes");
     return NextResponse.json(resultNode, { status: existingNode ? 200 : 201 });
   } catch (error: any) {
     console.error("Error creating node:", error);

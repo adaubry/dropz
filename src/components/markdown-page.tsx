@@ -1,37 +1,10 @@
-import { readFile, access } from 'fs/promises'
+import { Suspense } from 'react'
 import { resolve, isAbsolute } from 'path'
-import { constants } from 'fs'
-import { compileMDX } from 'next-mdx-remote/rsc'
-import remarkGfm from 'remark-gfm'
-import rehypeHighlight from 'rehype-highlight'
-import rehypeRaw from 'rehype-raw'
-import { remarkLogseq } from '@/lib/remark-logseq'
-import { MDXContent } from './mdx-component'
-import { useMDXComponents } from './mdx-component'
+import { getFirstVisibleLines } from '@/lib/markdown-cache'
+import { MarkdownPreview } from './markdown-preview'
+import { FullMarkdownContent } from './full-markdown-content'
 
 // This is a server component - do not add 'use client'
-
-/**
- * Pre-process markdown content to fix HTML self-closing tags for MDX compatibility
- * MDX requires JSX syntax, so HTML tags like <img> need to be <img />
- */
-function preprocessMarkdownForMDX(source: string): string {
-  let processed = source
-
-  // Convert <img ...> to <img ... />
-  processed = processed.replace(/<img([^>]*[^/])>/gi, '<img$1 />')
-  // Convert <br> to <br />
-  processed = processed.replace(/<br>/gi, '<br />')
-  // Convert <hr> to <hr />
-  processed = processed.replace(/<hr>/gi, '<hr />')
-  // Convert other common self-closing tags
-  processed = processed.replace(
-    /<(area|base|col|embed|input|link|meta|param|source|track|wbr)([^>]*[^/])>/gi,
-    '<$1$2 />'
-  )
-
-  return processed
-}
 
 interface MarkdownPageProps {
   /**
@@ -46,7 +19,11 @@ interface MarkdownPageProps {
 }
 
 /**
- * High-performance server component that renders markdown files
+ * High-performance server component that renders markdown files with PPR
+ * Implements Partial Pre-rendering pattern for optimal performance:
+ * - Pre-renders first visible lines instantly (< 100ms TTFB)
+ * - Streams full content in Suspense boundary
+ *
  * By default, it serves the README.md file from the project root
  *
  * @example
@@ -69,53 +46,29 @@ export async function MarkdownPage({
       ? filePath
       : resolve(projectRoot, filePath)
 
-    // Check if file exists before reading
-    try {
-      await access(fullPath, constants.R_OK)
-    } catch {
-      throw new Error(`File not found or not readable: ${fullPath}`)
-    }
-
-    // Read the markdown file from the file system
-    let source = await readFile(fullPath, 'utf-8')
-
-    // Pre-process markdown to fix HTML self-closing tags for MDX compatibility
-    source = preprocessMarkdownForMDX(source)
-
-    // Compile MDX with Logseq support and performance optimizations
-    const { content, frontmatter } = await compileMDX({
-      source,
-      options: {
-        parseFrontmatter: true,
-        mdxOptions: {
-          // remarkLogseq must run before remarkGfm to prevent autolink from interfering
-          remarkPlugins: [remarkLogseq, remarkGfm],
-          // rehypeRaw must come before rehypeHighlight to preserve HTML from remark-logseq
-          rehypePlugins: [rehypeRaw as any, rehypeHighlight],
-          development: process.env.NODE_ENV === 'development',
-        },
-      },
-      components: useMDXComponents({}),
-    })
+    // CRITICAL: Get first visible lines immediately (PPR pattern)
+    // If cached: instant return. If not cached: partial pre-render first ~30 lines
+    const firstLines = await getFirstVisibleLines(fullPath)
 
     return (
-      <div className="container mx-auto px-4 py-8 max-w-4xl">
-        {frontmatter && (
-          <div className="mb-8">
-            {(frontmatter as any).title && (
-              <h1 className="text-4xl font-bold tracking-tight mb-2">
-                {(frontmatter as any).title}
-              </h1>
-            )}
-            {(frontmatter as any).description && (
-              <p className="text-lg text-gray-600 dark:text-gray-400">
-                {(frontmatter as any).description}
-              </p>
-            )}
+      <>
+        {/* PRE-RENDERED: First visible lines render immediately */}
+        <MarkdownPreview content={firstLines} className={className} />
+
+        {/* STREAMED: Full content loads after initial render */}
+        <Suspense
+          fallback={
+            <div className="container mx-auto px-4 max-w-4xl">
+              <div className="h-4" /> {/* Spacer for smooth loading */}
+            </div>
+          }
+        >
+          {/* Full content streams in - provides complete content for SEO/accessibility */}
+          <div className="hidden">
+            <FullMarkdownContent filePath={fullPath} className={className} />
           </div>
-        )}
-        <MDXContent className={className}>{content}</MDXContent>
-      </div>
+        </Suspense>
+      </>
     )
   } catch (error) {
     const projectRoot = process.cwd()
@@ -129,7 +82,7 @@ export async function MarkdownPage({
 
     return (
       <div className="container mx-auto px-4 py-8 max-w-4xl">
-        <div className=" lg border border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950 p-6">
+        <div className="border border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950 p-6">
           <h2 className="text-lg font-semibold text-red-900 dark:text-red-100 mb-2">
             Error Loading Markdown
           </h2>
