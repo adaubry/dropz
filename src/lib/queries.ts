@@ -818,11 +818,3 @@ export async function getFolderIndexPage(
   return readmeMd;
 }
 
-// ============================================
-// BACKWARD COMPATIBILITY (Deprecated)
-// ============================================
-// These are kept for compatibility during migration.
-// TODO: Remove after all references are updated.
-
-export const getCollections = getPlanets;
-export const getProductCount = getDropCount;
