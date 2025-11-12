@@ -21,6 +21,7 @@ import { EditableCard } from "@/components/editable-card";
 import { EditableMarkdown } from "@/components/editable-markdown";
 import { FolderIndexContent } from "@/components/folder-index-content";
 import { EditablePlanetTitle } from "@/components/editable-planet-title";
+import { HistoryBreadcrumbs } from "@/components/history-breadcrumbs";
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -190,28 +191,8 @@ export default async function DynamicPage({
           <EditableMarkdown node={node} isEditing={isEditingActive} />
         )}
 
-        {/* Breadcrumb navigation */}
-        <nav className="mb-6 text-sm text-gray-600 dark:text-gray-400">
-          <Link
-            prefetch={true}
-            href={`/${planet}`}
-            className="hover:text-blue-600 hover:underline"
-          >
-            🌍 {planet}
-          </Link>
-          {path.map((segment, i) => (
-            <span key={i}>
-              <span> / </span>
-              <Link
-                prefetch={true}
-                href={`/${planet}/${path.slice(0, i + 1).join("/")}`}
-                className="hover:text-blue-600 hover:underline"
-              >
-                {segment}
-              </Link>
-            </span>
-          ))}
-        </nav>
+        {/* History-based breadcrumb navigation */}
+        <HistoryBreadcrumbs />
 
         {/* Main content */}
         <article className="prose prose-lg dark:prose-invert max-w-none">
@@ -268,28 +249,8 @@ export default async function DynamicPage({
         id="main-content"
       >
         <div className="container mx-auto p-4 max-w-7xl">
-      {/* Breadcrumb navigation */}
-      <nav className="mb-6 text-sm text-gray-600 dark:text-gray-400">
-        <Link
-          prefetch={true}
-          href={`/${planet}`}
-          className="hover:text-blue-600 hover:underline"
-        >
-          🌍 {planet}
-        </Link>
-        {path.map((segment, i) => (
-          <span key={i}>
-            <span> / </span>
-            <Link
-              prefetch={true}
-              href={`/${planet}/${path.slice(0, i + 1).join("/")}`}
-              className="hover:text-blue-600 hover:underline"
-            >
-              {segment}
-            </Link>
-          </span>
-        ))}
-      </nav>
+      {/* History-based breadcrumb navigation */}
+      <HistoryBreadcrumbs />
 
       {/* Page title and description */}
       <div className="mb-8">

@@ -177,7 +177,6 @@ revalidateTag('nodes'); // Invalidate all nodes cache
 | Static pages | Permanent | Never changes |
 | Planets/Users | 2 hours | Rarely changes |
 | Nodes content | 2 hours | Changes infrequently |
-| Search results | 1 minute | Needs freshness |
 | Editing session | No cache | Always fresh |
 
 ### N-1 Page Caching
@@ -377,13 +376,6 @@ export function Link({ href, children, ...props }) {
 -- O(1) path lookups
 CREATE INDEX idx_nodes_planet_namespace_slug
 ON nodes(planet_id, namespace, slug);
-
--- Full-text search
-CREATE INDEX idx_nodes_title_gin
-ON nodes USING GIN(to_tsvector('english', title));
-
-CREATE INDEX idx_nodes_content_gin
-ON nodes USING GIN(to_tsvector('english', content));
 ```
 
 ### Optimize Query Patterns
@@ -438,9 +430,6 @@ const nodes = await db.query.nodes.findMany({
   limit: 50, // Don't load everything
   offset: page * 50,
 });
-
-// Search with limit
-const results = await searchNodes(query, { limit: 20 });
 ```
 
 ---

@@ -329,30 +329,6 @@ export async function getNodeBreadcrumbs(node: Node): Promise<Breadcrumb[]> {
 }
 ```
 
-#### Pattern 4: Search with Full-Text
-
-```typescript
-export async function searchNodes(
-  planetId: string,
-  query: string,
-  limit: number = 20
-): Promise<Node[]> {
-  return await db.query.nodes.findMany({
-    where: and(
-      eq(nodes.planet_id, planetId),
-      or(
-        ilike(nodes.title, `%${query}%`),
-        ilike(nodes.content, `%${query}%`)
-      )
-    ),
-    limit,
-    orderBy: desc(nodes.updated_at),
-  });
-}
-```
-
-**Note:** For production, use PostgreSQL full-text search with GIN indexes.
-
 ### Caching Strategy
 
 ```typescript
@@ -363,17 +339,9 @@ export const getCachedPlanets = unstable_cache(
   { revalidate: 7200, tags: ["planets"] }
 );
 
-// 1-minute cache for frequently changing data
-export const getCachedSearchResults = unstable_cache(
-  (query: string) => searchNodes(query),
-  ["search"],
-  { revalidate: 60, tags: ["search"] }
-);
-
 // Invalidate on mutation
 await db.update(nodes).set({ ... });
 revalidateTag("planets");
-revalidateTag("search");
 ```
 
 ---
