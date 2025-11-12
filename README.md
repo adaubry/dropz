@@ -38,9 +38,9 @@ Visit `http://localhost:3000` to see your site!
 
 Essential guides:
 - **[CRUD Guidelines](./docs/CRUD_GUIDELINES.md)** - Modern patterns and best practices
+- **[Performance Guidelines](./docs/PERFORMANCE_GUIDELINES.md)** - Complete optimization guide
 - **[Markdown & MDX Guide](./docs/MARKDOWN_AND_MDX.md)** - Complete rendering guide
 - **[Deploy to Vercel](./docs/DEPLOY_TO_VERCEL.md)** - Production deployment
-- **[Performance Guide](./docs/PERFORMANCE_REVAMP.md)** - Optimization techniques
 - **[Changelog](./CHANGELOG.md)** - Version history
 
 ## Tech Stack
@@ -169,12 +169,14 @@ pnpm lint
 
 ## Credits
 
-Built by:
-- [@ethanniser](https://x.com/ethanniser)
-- [@RhysSullivan](https://x.com/RhysSullivan)
-- [@armans-code](https://x.com/ksw_arman)
+**Dropz** is created and maintained by:
+- [@adaubry](https://x.com/adaubry) - Creator & Lead Developer
+- [@claude](https://claude.ai) - AI Development Partner
 
-Originally based on the NextFaster e-commerce template, completely transformed into a knowledge management platform.
+**Special Thanks:**
+- [@ethanniser](https://x.com/ethanniser) - For creating NextFaster, which served as a major influence and inspiration for Dropz's architecture and performance patterns
+
+Dropz was inspired by the NextFaster template's innovative approach to performance optimization and modern Next.js patterns.
 
 ## License
 

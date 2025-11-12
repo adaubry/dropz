@@ -275,11 +275,12 @@ pnpm db:push
 
 ## Contributors
 
-Special thanks to all contributors:
+**Dropz** is created and maintained by:
+- [@adaubry](https://x.com/adaubry) - Creator & Lead Developer
+- [@claude](https://claude.ai) - AI Development Partner
 
-- [@ethanniser](https://x.com/ethanniser) - Original creator
-- [@RhysSullivan](https://x.com/RhysSullivan) - Core contributor
-- [@armans-code](https://x.com/ksw_arman) - Core contributor
+**Special Thanks:**
+- [@ethanniser](https://x.com/ethanniser) - For creating NextFaster, which served as a major influence and inspiration for Dropz's architecture and performance patterns
 
 ---
 
