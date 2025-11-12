@@ -26,7 +26,8 @@ import {
   type NodeBackup,
 } from "@/db/schema";
 import { eq, and, like, sql, desc } from "drizzle-orm";
-import { unstable_cache } from "next/cache";
+import { unstable_cache } from "./unstable-cache";
+import { revalidateTag } from "next/cache";
 
 // ============================================
 // USER / AUTH QUERIES
@@ -111,6 +112,7 @@ export async function ensureUserWorkspace(userId: number, username: string): Pro
       })
       .returning();
     workspace = newWorkspace;
+    revalidateTag("planets");
   }
 
   return workspace;
@@ -143,6 +145,7 @@ export async function createPlanet(
     })
     .returning();
 
+  revalidateTag("planets");
   return planet;
 }
 
@@ -162,6 +165,8 @@ export async function deletePlanet(planetId: number, userId: number): Promise<vo
 
   // Delete will cascade to nodes, editing sessions, etc.
   await db.delete(planets).where(eq(planets.id, planetId));
+  revalidateTag("planets");
+  revalidateTag("nodes");
 }
 
 /**
@@ -244,6 +249,7 @@ export async function endEditingSession(sessionId: number): Promise<void> {
   // Clean up backups after successfully applying changes
   // Since changes are accepted, we don't need the backups anymore
   await db.delete(nodeBackups).where(eq(nodeBackups.session_id, sessionId));
+  revalidateTag("nodes");
 }
 
 /**
@@ -396,6 +402,7 @@ export async function discardEditingSession(sessionId: number): Promise<void> {
 
   // Delete the editing session (cascades to backups)
   await db.delete(editingSessions).where(eq(editingSessions.id, sessionId));
+  revalidateTag("nodes");
 }
 
 // ============================================
@@ -412,7 +419,7 @@ export const getPlanets = unstable_cache(
     });
   },
   ["planets"],
-  { revalidate: 60 * 60 * 2 } // 2 hours
+  { revalidate: 60 * 60 * 2, tags: ["planets"] } // 2 hours
 );
 
 /**
@@ -425,7 +432,7 @@ export const getPlanetBySlug = unstable_cache(
     });
   },
   ["planet-by-slug"],
-  { revalidate: 60 * 60 * 2 }
+  { revalidate: 60 * 60 * 2, tags: ["planets"] }
 );
 
 // ============================================
@@ -576,7 +583,7 @@ export const getRelatedNodes = unstable_cache(
       .limit(limit);
   },
   ["related-nodes"],
-  { revalidate: 60 * 60 * 2 }
+  { revalidate: 60 * 60 * 2, tags: ["nodes", "node-links"] }
 );
 
 /**
@@ -624,7 +631,7 @@ export const searchNodes = unstable_cache(
       .limit(limit);
   },
   ["search-nodes"],
-  { revalidate: 60 } // 1 minute (search results change more frequently)
+  { revalidate: 60, tags: ["nodes"] } // 1 minute (search results change more frequently)
 );
 
 /**
@@ -667,7 +674,7 @@ export const getSearchResults = unstable_cache(
     return results;
   },
   ["search-results"],
-  { revalidate: 60 } // 1 minute
+  { revalidate: 60, tags: ["nodes"] } // 1 minute
 );
 
 // ============================================
@@ -695,7 +702,7 @@ export const getNodeCount = unstable_cache(
     return result[0]?.count || 0;
   },
   ["node-count"],
-  { revalidate: 60 * 60 } // 1 hour
+  { revalidate: 60 * 60, tags: ["nodes"] } // 1 hour
 );
 
 /**
@@ -711,7 +718,7 @@ export const getDropCount = unstable_cache(
     return result[0]?.count || 0;
   },
   ["total-drop-count"],
-  { revalidate: 60 * 60 * 2 }
+  { revalidate: 60 * 60 * 2, tags: ["nodes"] }
 );
 
 // ============================================

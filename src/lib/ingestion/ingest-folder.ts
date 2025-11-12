@@ -15,6 +15,7 @@
 import fs from "fs/promises";
 import path from "path";
 import matter from "gray-matter";
+import { revalidateTag } from "next/cache";
 import { db } from "@/db";
 import { nodes, planets, type NewNode } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
@@ -95,6 +96,10 @@ export async function ingestFolder({
   console.log(`\n✅ Ingestion complete!`);
   console.log(`   - Success: ${successCount} files`);
   console.log(`   - Errors: ${errorCount} files`);
+
+  // Invalidate caches after ingestion
+  revalidateTag("planets");
+  revalidateTag("nodes");
 
   return { successCount, errorCount, planet };
 }

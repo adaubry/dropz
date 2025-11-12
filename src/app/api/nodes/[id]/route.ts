@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidateTag } from "next/cache";
 import { db } from "@/db";
 import { nodes } from "@/db/schema";
 import { eq } from "drizzle-orm";
@@ -176,6 +177,7 @@ export async function PUT(
       .where(eq(nodes.id, nodeId))
       .returning();
 
+    revalidateTag("nodes");
     return NextResponse.json(updatedNode);
   } catch (error: any) {
     console.error("Error updating node:", error);
@@ -244,6 +246,7 @@ export async function DELETE(
     // Delete the node
     await db.delete(nodes).where(eq(nodes.id, nodeId));
 
+    revalidateTag("nodes");
     return NextResponse.json({ success: true }, { status: 200 });
   } catch (error: any) {
     console.error("Error deleting node:", error);

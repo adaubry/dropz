@@ -30,7 +30,7 @@ async function getFullMarkdownUncached(filePath: string): Promise<string> {
 export const getFirstVisibleLines = unstable_cache(
   getFirstVisibleLinesUncached,
   ["markdown-first-lines"],
-  { revalidate: 60 * 60 * 2 } // 2 hours
+  { revalidate: 60 * 60 * 2, tags: ["markdown"] } // 2 hours
 );
 
 /**
@@ -40,7 +40,7 @@ export const getFirstVisibleLines = unstable_cache(
 export const getFullMarkdown = unstable_cache(
   getFullMarkdownUncached,
   ["markdown-full"],
-  { revalidate: 60 * 60 * 2 } // 2 hours
+  { revalidate: 60 * 60 * 2, tags: ["markdown"] } // 2 hours
 );
 
 /**

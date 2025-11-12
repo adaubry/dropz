@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidateTag } from "next/cache";
 import { db } from "@/db";
 import { planets } from "@/db/schema";
 import { eq } from "drizzle-orm";
@@ -85,6 +86,7 @@ export async function PUT(
       .where(eq(planets.id, planetId))
       .returning();
 
+    revalidateTag("planets");
     return NextResponse.json(updatedPlanet);
   } catch (error: any) {
     console.error("Error updating planet:", error);
