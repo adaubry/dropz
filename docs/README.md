@@ -70,10 +70,13 @@ Visit `http://localhost:3000` to see your site!
   - Performance optimization
 
 **Performance:**
-- **[Performance Guide](./PERFORMANCE_REVAMP.md)** - Optimization techniques
+- **[Performance Guidelines](./PERFORMANCE_GUIDELINES.md)** - Complete optimization guide
+  - Performance principles and targets
   - Partial Pre-rendering (PPR)
-  - Caching strategies
-  - Prefetching patterns
+  - Caching strategies and patterns
+  - Image optimization techniques
+  - Database query optimization
+  - Real-world metrics and results
 
 **User Features:**
 - **[User Profiles & Editing](./USER_PROFILE_AND_EDITING.md)** - User system documentation
@@ -93,6 +96,7 @@ Historical documentation (for reference only):
 - **[Migration Roadmap](./archive/migration_roadmap.md)** - Complete transformation from e-commerce to knowledge management
 - **[Database Revamp](./archive/DATABASE_REVAMP_COMPLETE.md)** - Unified nodes system migration
 - **[Hierarchy Fix](./archive/HIERARCHY_FIX.md)** - Namespace-based hierarchy implementation
+- **[Performance Revamp Implementation](./archive/PERFORMANCE_REVAMP_IMPLEMENTATION.md)** - Original performance optimization implementation summary
 
 ---
 
@@ -471,12 +475,14 @@ See LICENSE file in project root.
 
 ## Credits
 
-Built by:
-- [@ethanniser](https://x.com/ethanniser)
-- [@RhysSullivan](https://x.com/RhysSullivan)
-- [@armans-code](https://x.com/ksw_arman)
+**Dropz** is created and maintained by:
+- [@adaubry](https://x.com/adaubry) - Creator & Lead Developer
+- [@claude](https://claude.ai) - AI Development Partner
 
-Based on NextFaster template, transformed into Dropz.
+**Special Thanks:**
+- [@ethanniser](https://x.com/ethanniser) - For creating NextFaster, which served as a major influence and inspiration for Dropz's architecture and performance patterns
+
+Dropz was inspired by the NextFaster template's innovative approach to performance optimization and modern Next.js patterns.
 
 ---
 
