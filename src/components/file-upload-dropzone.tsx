@@ -17,7 +17,7 @@ interface FileWithPath {
 // Recursively read all files from a directory entry
 async function readDirectory(
   entry: any,
-  basePath: string = ""
+  basePath: string = "",
 ): Promise<FileWithPath[]> {
   const files: FileWithPath[] = [];
 
@@ -52,7 +52,7 @@ async function readDirectory(
 
 // Get all files from dropped items (handles both files and directories)
 async function getAllFiles(
-  dataTransferItems: DataTransferItemList
+  dataTransferItems: DataTransferItemList,
 ): Promise<FileWithPath[]> {
   const allFiles: FileWithPath[] = [];
 
@@ -126,16 +126,16 @@ export function FileUploadDropzone({
       setIsDragging(false);
     };
 
-    window.addEventListener('dragenter', handleDragEnter);
-    window.addEventListener('dragover', handleDragOver);
-    window.addEventListener('dragleave', handleDragLeave);
-    window.addEventListener('drop', handleDrop);
+    window.addEventListener("dragenter", handleDragEnter);
+    window.addEventListener("dragover", handleDragOver);
+    window.addEventListener("dragleave", handleDragLeave);
+    window.addEventListener("drop", handleDrop);
 
     return () => {
-      window.removeEventListener('dragenter', handleDragEnter);
-      window.removeEventListener('dragover', handleDragOver);
-      window.removeEventListener('dragleave', handleDragLeave);
-      window.removeEventListener('drop', handleDrop);
+      window.removeEventListener("dragenter", handleDragEnter);
+      window.removeEventListener("dragover", handleDragOver);
+      window.removeEventListener("dragleave", handleDragLeave);
+      window.removeEventListener("drop", handleDrop);
     };
   }, [isActive]);
 
@@ -160,7 +160,9 @@ export function FileUploadDropzone({
         const filesWithPaths = await getAllFiles(e.dataTransfer.items);
 
         if (filesWithPaths.length === 0) {
-          alert("No markdown files found. Please drop .md or .mdx files or folders containing them.");
+          alert(
+            "No markdown files found. Please drop .md or .mdx files or folders containing them.",
+          );
           setUploading(false);
           return;
         }
@@ -186,10 +188,12 @@ export function FileUploadDropzone({
 
         // Sort folder paths by depth (shallowest first) to create parents before children
         const sortedFolderPaths = Array.from(folderPaths).sort(
-          (a, b) => a.split("/").length - b.split("/").length
+          (a, b) => a.split("/").length - b.split("/").length,
         );
 
-        console.log(`[DEBUG] Creating ${sortedFolderPaths.length} folders and ${filesWithPaths.length} files`);
+        console.log(
+          `[DEBUG] Creating ${sortedFolderPaths.length} folders and ${filesWithPaths.length} files`,
+        );
         console.log(`[DEBUG] Folders:`, sortedFolderPaths);
 
         setUploadProgress(`Creating folder structure...`);
@@ -202,7 +206,9 @@ export function FileUploadDropzone({
             .filter(Boolean)
             .join("/");
 
-          console.log(`[DEBUG] Creating folder: ${folderSlug} in namespace: "${folderNamespace}"`);
+          console.log(
+            `[DEBUG] Creating folder: ${folderSlug} in namespace: "${folderNamespace}"`,
+          );
 
           try {
             const response = await fetch("/api/nodes", {
@@ -212,36 +218,51 @@ export function FileUploadDropzone({
               },
               body: JSON.stringify({
                 slug: folderSlug,
-                title: folderSlug.replace(/-/g, " ").replace(/\b\w/g, (l: string) => l.toUpperCase()),
+                title: folderSlug
+                  .replace(/-/g, " ")
+                  .replace(/\b\w/g, (l: string) => l.toUpperCase()),
                 namespace: folderNamespace,
                 type: "folder",
                 content: "",
               }),
             });
 
-            const data = await response.json().catch(() => ({ error: `HTTP ${response.status}` }));
+            const data = await response
+              .json()
+              .catch(() => ({ error: `HTTP ${response.status}` }));
 
             if (!response.ok) {
               // Check if it's a duplicate error (which we can ignore)
-              const isDuplicate = data.error?.toLowerCase().includes("duplicate") ||
-                                 data.error?.toLowerCase().includes("already exists");
+              const isDuplicate =
+                data.error?.toLowerCase().includes("duplicate") ||
+                data.error?.toLowerCase().includes("already exists");
 
               if (isDuplicate) {
-                console.log(`[DEBUG] Folder already exists (skipping): ${folderSlug}`);
+                console.log(
+                  `[DEBUG] Folder already exists (skipping): ${folderSlug}`,
+                );
               } else {
-                console.error(`[ERROR] Failed to create folder ${folderSlug}:`, {
-                  status: response.status,
-                  statusText: response.statusText,
-                  error: data.error,
-                  details: data.details
-                });
-                throw new Error(`Failed to create folder "${folderSlug}": ${data.error || response.statusText}`);
+                console.error(
+                  `[ERROR] Failed to create folder ${folderSlug}:`,
+                  {
+                    status: response.status,
+                    statusText: response.statusText,
+                    error: data.error,
+                    details: data.details,
+                  },
+                );
+                throw new Error(
+                  `Failed to create folder "${folderSlug}": ${data.error || response.statusText}`,
+                );
               }
             } else {
               console.log(`[DEBUG] Successfully created folder: ${folderSlug}`);
             }
           } catch (err: any) {
-            console.error(`[ERROR] Exception creating folder ${folderSlug}:`, err);
+            console.error(
+              `[ERROR] Exception creating folder ${folderSlug}:`,
+              err,
+            );
             throw err;
           }
         }
@@ -255,7 +276,9 @@ export function FileUploadDropzone({
         // Process each file
         for (let i = 0; i < filesWithPaths.length; i++) {
           const { file, relativePath } = filesWithPaths[i];
-          setUploadProgress(`Uploading ${i + 1}/${filesWithPaths.length}: ${file.name}`);
+          setUploadProgress(
+            `Uploading ${i + 1}/${filesWithPaths.length}: ${file.name}`,
+          );
 
           const content = await file.text();
 
@@ -264,8 +287,11 @@ export function FileUploadDropzone({
 
           // Extract directory path from relativePath (which includes the filename)
           // Example: "guides/setup.md" -> "guides"
-          const pathParts = relativePath ? relativePath.split("/").filter(Boolean) : [];
-          const directoryPath = pathParts.length > 1 ? pathParts.slice(0, -1).join("/") : "";
+          const pathParts = relativePath
+            ? relativePath.split("/").filter(Boolean)
+            : [];
+          const directoryPath =
+            pathParts.length > 1 ? pathParts.slice(0, -1).join("/") : "";
 
           // Combine current path with directory path
           const namespace = [...currentPath, directoryPath]
@@ -288,7 +314,9 @@ export function FileUploadDropzone({
               },
               body: JSON.stringify({
                 slug,
-                title: slug.replace(/-/g, " ").replace(/\b\w/g, (l: string) => l.toUpperCase()),
+                title: slug
+                  .replace(/-/g, " ")
+                  .replace(/\b\w/g, (l: string) => l.toUpperCase()),
                 namespace,
                 type: "file",
                 content,
@@ -297,7 +325,10 @@ export function FileUploadDropzone({
 
             if (!response.ok) {
               const data = await response.json();
-              console.error(`[ERROR] Failed to upload ${file.name}:`, data.error);
+              console.error(
+                `[ERROR] Failed to upload ${file.name}:`,
+                data.error,
+              );
               filesFailed++;
             } else {
               console.log(`[DEBUG] Successfully uploaded: ${file.name}`);
@@ -310,9 +341,10 @@ export function FileUploadDropzone({
         }
 
         // Refresh the page to show new files
-        const message = filesFailed > 0
-          ? `Uploaded ${filesUploaded} file(s) successfully. ${filesFailed} file(s) failed.`
-          : `Successfully uploaded ${sortedFolderPaths.length} folder(s) and ${filesUploaded} file(s)!`;
+        const message =
+          filesFailed > 0
+            ? `Uploaded ${filesUploaded} file(s) successfully. ${filesFailed} file(s) failed.`
+            : `Successfully uploaded ${sortedFolderPaths.length} folder(s) and ${filesUploaded} file(s)!`;
         alert(message);
         router.refresh();
       } catch (err: any) {
@@ -323,7 +355,7 @@ export function FileUploadDropzone({
         setUploadProgress("");
       }
     },
-    [isActive, currentPath, router]
+    [isActive, currentPath, router],
   );
 
   if (!isActive) {
@@ -335,12 +367,12 @@ export function FileUploadDropzone({
       {isDragging && (
         <div
           onDrop={handleFileDrop}
-          className="fixed inset-0 z-50 bg-blue-500 bg-opacity-10 border-4 border-dashed border-blue-500 flex items-center justify-center"
+          className="fixed inset-0 z-50 ml-32 flex max-h-[100vh] items-center justify-center border-2 border-dashed border-blue-500 bg-blue-500 bg-opacity-10"
         >
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-8 shadow-2xl max-w-md">
+          <div className="max-w-md rounded-lg bg-white p-8 shadow-2xl dark:bg-gray-800">
             <div className="text-center">
               <svg
-                className="mx-auto h-16 w-16 text-blue-500 mb-4"
+                className="mx-auto mb-4 h-16 w-16 text-blue-500"
                 stroke="currentColor"
                 fill="none"
                 viewBox="0 0 48 48"
@@ -353,14 +385,17 @@ export function FileUploadDropzone({
                   strokeLinejoin="round"
                 />
               </svg>
-              <h3 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">
+              <h3 className="mb-2 text-2xl font-bold text-gray-900 dark:text-gray-100">
                 Drop Files or Folders Here
               </h3>
-              <p className="text-sm text-gray-600 dark:text-gray-300 mb-1">
+              <p className="mb-1 text-sm text-gray-600 dark:text-gray-300">
                 Upload .md or .mdx files
               </p>
               <p className="text-xs text-gray-500 dark:text-gray-400">
-                Upload to: <span className="font-mono text-blue-600 dark:text-blue-400">/{currentPath.join("/") || "root"}</span>
+                Upload to:{" "}
+                <span className="font-mono text-blue-600 dark:text-blue-400">
+                  /{currentPath.join("/") || "root"}
+                </span>
               </p>
             </div>
           </div>
@@ -368,11 +403,11 @@ export function FileUploadDropzone({
       )}
 
       {uploading && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 pointer-events-auto">
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-8 shadow-xl max-w-md">
+        <div className="pointer-events-auto fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="max-w-md rounded-lg bg-white p-8 shadow-xl dark:bg-gray-800">
             <div className="text-center">
-              <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-500 border-t-transparent mx-auto mb-4"></div>
-              <p className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">
+              <div className="mx-auto mb-4 h-16 w-16 animate-spin rounded-full border-4 border-blue-500 border-t-transparent"></div>
+              <p className="mb-2 text-xl font-bold text-gray-900 dark:text-gray-100">
                 {uploadProgress || "Uploading..."}
               </p>
               <p className="text-sm text-gray-500 dark:text-gray-400">

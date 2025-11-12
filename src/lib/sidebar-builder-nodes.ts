@@ -14,7 +14,7 @@ import {
  */
 export async function buildNodesSidebar(
   planetSlug: string,
-  path: string[]
+  path: string[],
 ): Promise<{
   parentLink?: { title: string; href: string };
   currentItems: SidebarItem[];
@@ -36,21 +36,21 @@ export async function buildNodesSidebar(
       const parentNode = await getNodeByPath(planetSlug, parentPath);
       if (parentNode) {
         parentLink = {
-          title: `← ${parentNode.title}`,
+          title: `${parentNode.title}`,
           href: `/${planetSlug}/${parentPath.join("/")}`,
         };
       }
     } else {
       // Parent is the planet root
       parentLink = {
-        title: `← ${planet.name}`,
+        title: `${planet.name}`,
         href: `/${planetSlug}`,
       };
     }
   } else {
     // At planet root, parent is home
     parentLink = {
-      title: "← Home",
+      title: "Home",
       href: "/",
     };
   }
@@ -72,13 +72,16 @@ export async function buildNodesSidebar(
         id: child.id,
         title: child.title,
         href: `/${planetSlug}/${childNamespace}`,
-        children: grandchildren.length > 0 ? grandchildren.map((grandchild) => ({
-          id: grandchild.id,
-          title: grandchild.title,
-          href: `/${planetSlug}/${childNamespace}/${grandchild.slug}`,
-        })) : undefined,
+        children:
+          grandchildren.length > 0
+            ? grandchildren.map((grandchild) => ({
+                id: grandchild.id,
+                title: grandchild.title,
+                href: `/${planetSlug}/${childNamespace}/${grandchild.slug}`,
+              }))
+            : undefined,
       };
-    })
+    }),
   );
 
   return {

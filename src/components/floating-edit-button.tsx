@@ -38,7 +38,7 @@ export function FloatingEditButton({
   return (
     <div
       ref={containerRef}
-      className={`relative group ${className}`}
+      className={`group relative ${className}`}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
@@ -52,34 +52,17 @@ export function FloatingEditButton({
             e.stopPropagation();
             onEdit();
           }}
-          className="absolute top-2 right-2 z-50
-                     flex items-center gap-2
-                     px-3 py-2
-                     bg-blue-600 hover:bg-blue-700
-                     text-white text-sm font-medium
-                     rounded-lg shadow-lg
-                     transition-all duration-200 ease-out
-                     transform hover:scale-105
-                     border border-blue-500
-                     opacity-0 group-hover:opacity-100
-                     animate-in fade-in slide-in-from-top-2
-                     cursor-pointer"
+          className="absolute right-2 top-2 z-50 flex transform cursor-pointer items-center gap-2 rounded-lg border border-blue-500 bg-blue-600 px-3 py-2 text-sm font-medium text-white opacity-0 shadow-lg transition-all duration-200 ease-out animate-in fade-in slide-in-from-top-2 hover:scale-105 hover:bg-blue-700 group-hover:opacity-100"
           aria-label="Edit this content"
         >
-          <Pencil className="w-4 h-4" />
+          <Pencil className="h-4 w-4" />
           <span>Edit</span>
         </button>
       )}
 
       {/* Hover overlay for visual feedback */}
       {isHovered && (
-        <div className="absolute inset-0 pointer-events-none
-                        border-2 border-blue-500 border-dashed
-                        rounded-lg
-                        bg-blue-50 dark:bg-blue-950
-                        opacity-10
-                        transition-opacity duration-200"
-        />
+        <div className="pointer-events-none absolute inset-0 rounded-lg border border-dashed border-blue-500 bg-blue-50 opacity-10 transition-opacity duration-200 dark:bg-blue-950" />
       )}
     </div>
   );
@@ -104,7 +87,7 @@ export function InlineFloatingEditButton({
 
   return (
     <span
-      className={`relative inline-block group ${className}`}
+      className={`group relative inline-block ${className}`}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
@@ -118,18 +101,10 @@ export function InlineFloatingEditButton({
             e.stopPropagation();
             onEdit();
           }}
-          className="absolute -right-8 top-0 z-50
-                     p-1.5
-                     bg-blue-600 hover:bg-blue-700
-                     text-white
-                     rounded-md shadow-md
-                     transition-all duration-150
-                     transform hover:scale-110
-                     opacity-0 group-hover:opacity-100
-                     cursor-pointer"
+          className="absolute -right-8 top-0 z-50 transform cursor-pointer rounded-md bg-blue-600 p-1.5 text-white opacity-0 shadow-md transition-all duration-150 hover:scale-110 hover:bg-blue-700 group-hover:opacity-100"
           aria-label="Edit"
         >
-          <Pencil className="w-3 h-3" />
+          <Pencil className="h-3 w-3" />
         </button>
       )}
     </span>
