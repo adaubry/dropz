@@ -121,29 +121,39 @@ export async function ensureUserWorkspace(userId: number, username: string): Pro
 /**
  * Create a new planet for a user
  * Users can have multiple planets
+ * Uses transaction for atomicity and includes idempotency check
  */
 export async function createPlanet(
   userId: number,
   data: { name: string; slug: string; description?: string }
 ): Promise<Planet> {
-  // Check if slug is already taken
-  const existing = await db.query.planets.findFirst({
-    where: eq(planets.slug, data.slug),
+  // Use transaction for atomic operation
+  const planet = await db.transaction(async (tx) => {
+    // Check if slug is already taken (idempotency check)
+    const existing = await tx.query.planets.findFirst({
+      where: eq(planets.slug, data.slug),
+    });
+
+    if (existing) {
+      // If the existing planet belongs to the same user, return it (repeat safety)
+      if (existing.user_id === userId) {
+        return existing;
+      }
+      throw new Error(`Planet slug "${data.slug}" is already taken`);
+    }
+
+    const [newPlanet] = await tx
+      .insert(planets)
+      .values({
+        name: data.name,
+        slug: data.slug,
+        description: data.description || "",
+        user_id: userId,
+      })
+      .returning();
+
+    return newPlanet;
   });
-
-  if (existing) {
-    throw new Error(`Planet slug "${data.slug}" is already taken`);
-  }
-
-  const [planet] = await db
-    .insert(planets)
-    .values({
-      name: data.name,
-      slug: data.slug,
-      description: data.description || "",
-      user_id: userId,
-    })
-    .returning();
 
   revalidateTag("planets");
   return planet;
@@ -152,19 +162,24 @@ export async function createPlanet(
 /**
  * Delete a planet and all its content
  * Only the owner can delete their planet
+ * Uses transaction for atomicity
  */
 export async function deletePlanet(planetId: number, userId: number): Promise<void> {
-  // Verify ownership
-  const planet = await db.query.planets.findFirst({
-    where: and(eq(planets.id, planetId), eq(planets.user_id, userId)),
+  // Use transaction for atomic operation
+  await db.transaction(async (tx) => {
+    // Verify ownership
+    const planet = await tx.query.planets.findFirst({
+      where: and(eq(planets.id, planetId), eq(planets.user_id, userId)),
+    });
+
+    if (!planet) {
+      throw new Error("Planet not found or you don't have permission to delete it");
+    }
+
+    // Delete will cascade to nodes, editing sessions, etc.
+    await tx.delete(planets).where(eq(planets.id, planetId));
   });
 
-  if (!planet) {
-    throw new Error("Planet not found or you don't have permission to delete it");
-  }
-
-  // Delete will cascade to nodes, editing sessions, etc.
-  await db.delete(planets).where(eq(planets.id, planetId));
   revalidateTag("planets");
   revalidateTag("nodes");
 }

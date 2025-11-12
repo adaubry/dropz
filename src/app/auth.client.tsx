@@ -100,6 +100,7 @@ export function SignInSignUp() {
 }
 
 import { signOut } from "./(login)/actions";
+import Link from "next/link";
 
 export function SignOut(props: { username: string }) {
   return (
@@ -110,7 +111,13 @@ export function SignOut(props: { username: string }) {
           <polygon points="0,0 5,6 10,0"></polygon>
         </svg>
       </PopoverTrigger>
-      <PopoverContent className="flex w-32 flex-col items-center px-8 py-4">
+      <PopoverContent className="flex w-32 flex-col items-center gap-2 px-8 py-4">
+        <Link
+          href="/profile"
+          className="w-full border-[1px] border-accent1 bg-white px-4 py-2 text-center text-xs font-semibold text-accent1 hover:bg-gray-50"
+        >
+          Profile
+        </Link>
         <form>
           <Button
             formAction={signOut}
