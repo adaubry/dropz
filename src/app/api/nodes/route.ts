@@ -11,6 +11,7 @@ import {
 import { eq, and } from "drizzle-orm";
 import matter from "gray-matter";
 import { createVersionChain, updateVersionChain } from "@/lib/diff";
+import { invalidateBlockIndexCache } from "@/lib/logseq/cache";
 
 /**
  * POST /api/nodes
@@ -199,6 +200,10 @@ export async function POST(request: NextRequest) {
       resultNode = newNode;
       existed = false;
     }
+
+    // Invalidate block index cache when creating/updating Logseq pages
+    // This ensures reference resolution uses fresh data
+    invalidateBlockIndexCache(workspace.id);
 
     revalidateTag("nodes");
     return NextResponse.json(resultNode, { status: existed ? 200 : 201 });

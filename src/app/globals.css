@@ -439,7 +439,6 @@ textarea {
 
 .logseq-page-embed .logseq-embed-content {
   @apply text-gray-700 dark:text-gray-300 text-sm leading-relaxed;
-  @apply prose prose-sm dark:prose-invert max-w-none;
 }
 
 /* Block Embeds (Resolved) */
@@ -459,7 +458,13 @@ textarea {
 
 /* Logseq Content Container */
 .logseq-content {
-  @apply prose prose-lg dark:prose-invert max-w-none;
+  @apply max-w-none;
+  line-height: 1.75;
+  color: rgb(55, 65, 81);
+}
+
+.dark .logseq-content {
+  color: rgb(209, 213, 219);
 }
 
 .logseq-content h1 {
