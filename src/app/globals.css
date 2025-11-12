@@ -412,3 +412,89 @@ textarea {
 .logseq-callout[data-callout-type="danger"] .logseq-callout-title::before {
   content: "🚨";
 }
+
+/* Resolved Block References */
+.logseq-block-ref-resolved {
+  @apply inline-flex items-center px-3 py-1.5 rounded-md bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-200;
+  @apply border border-purple-300 dark:border-purple-700;
+  @apply italic;
+  box-shadow: 0 1px 2px rgba(147, 51, 234, 0.1);
+}
+
+.logseq-block-ref-resolved::before {
+  content: "→ ";
+  @apply opacity-60 not-italic;
+}
+
+/* Page Embeds (Resolved) */
+.logseq-page-embed {
+  @apply my-6 p-5 rounded-lg border-2 border-blue-200 dark:border-blue-800;
+  @apply bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/30 dark:to-blue-900/20;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.1);
+}
+
+.logseq-page-embed .logseq-embed-header {
+  @apply text-blue-700 dark:text-blue-300 font-semibold mb-3 pb-2 border-b border-blue-200 dark:border-blue-800;
+}
+
+.logseq-page-embed .logseq-embed-content {
+  @apply text-gray-700 dark:text-gray-300 text-sm leading-relaxed;
+  @apply prose prose-sm dark:prose-invert max-w-none;
+}
+
+/* Block Embeds (Resolved) */
+.logseq-block-embed {
+  @apply my-5 p-4 rounded-lg border-2 border-purple-200 dark:border-purple-800;
+  @apply bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950/30 dark:to-purple-900/20;
+  box-shadow: 0 2px 6px rgba(147, 51, 234, 0.1);
+}
+
+.logseq-block-embed .logseq-embed-header {
+  @apply text-purple-700 dark:text-purple-300 font-medium mb-2 pb-1 border-b border-purple-200 dark:border-purple-800 text-sm;
+}
+
+.logseq-block-embed .logseq-embed-content {
+  @apply text-gray-700 dark:text-gray-300 leading-relaxed;
+}
+
+/* Logseq Content Container */
+.logseq-content {
+  @apply prose prose-lg dark:prose-invert max-w-none;
+}
+
+.logseq-content h1 {
+  @apply text-4xl font-bold mt-8 mb-4;
+}
+
+.logseq-content h2 {
+  @apply text-3xl font-semibold mt-6 mb-3;
+}
+
+.logseq-content h3 {
+  @apply text-2xl font-semibold mt-5 mb-2;
+}
+
+.logseq-content p {
+  @apply my-4 leading-relaxed;
+}
+
+.logseq-content ul,
+.logseq-content ol {
+  @apply my-4 ml-6;
+}
+
+.logseq-content li {
+  @apply my-2;
+}
+
+.logseq-content code {
+  @apply px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-sm font-mono;
+}
+
+.logseq-content pre {
+  @apply my-4 p-4 rounded-lg overflow-x-auto;
+}
+
+.logseq-content pre code {
+  @apply p-0 bg-transparent;
+}

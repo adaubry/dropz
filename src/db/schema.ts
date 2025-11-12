@@ -38,18 +38,18 @@ export type Planet = typeof planets.$inferSelect;
 export type NewPlanet = typeof planets.$inferInsert;
 
 /**
- * Unified Nodes Table: Stores all content hierarchy levels + files
- * Namespace-based storage allows arbitrary depth without parent_id chains
+ * Unified Nodes Table: Stores Logseq pages (both regular and journal pages)
+ * Namespace-based storage with full Logseq compatibility
  *
- * Key Innovation: Flat storage with namespace paths
+ * Logseq Paradigm: Everything is a page, organized by namespaces in page names
  * Examples:
- * - /intro.md → namespace: "", depth: 0, slug: "intro"
- * - /guides/setup.md → namespace: "guides", depth: 1, slug: "setup"
- * - /courses/cs101/w1/d1/lecture.md → namespace: "courses/cs101/w1/d1", depth: 4, slug: "lecture"
- * - /a/b/c/d/e/f/g/deep.md → namespace: "a/b/c/d/e/f/g", depth: 7, slug: "deep"
+ * - pages/intro.md → page_name: "intro", namespace: "", slug: "intro"
+ * - pages/guides___setup.md → page_name: "guides/setup", namespace: "guides", slug: "setup"
+ * - pages/guides___setup___intro.md → page_name: "guides/setup/intro", namespace: "guides/setup", slug: "intro"
+ * - journals/2025_11_12.md → page_name: "2025-11-12", is_journal: true, journal_date: 2025-11-12
  *
- * Query Performance: O(1) lookups via indexed (planet_id, namespace, slug)
- * No recursive CTEs needed! No parent_id joins! No depth limitations!
+ * Query Performance: O(1) lookups via indexed (planet_id, page_name)
+ * No folder hierarchy! All pages are flat! Namespaces are virtual!
  */
 export const nodes = pgTable(
   "nodes",
@@ -65,14 +65,22 @@ export const nodes = pgTable(
     slug: text("slug").notNull(),
     title: text("title").notNull(),
 
-    // Hierarchy (Logseq-style flat storage)
-    namespace: text("namespace").notNull().default(""), // "ocean/sea/river"
-    depth: integer("depth").notNull(), // 0=ocean, 1=sea, 2=river, 3=drop
-    file_path: text("file_path").notNull(), // original filesystem path
+    // Logseq page identification
+    page_name: text("page_name"), // Full page name: "guides/setup/intro"
 
-    // Type discrimination
-    type: text("type").notNull(), // 'folder' | 'file'
-    node_type: text("node_type"), // 'ocean' | 'sea' | 'river' | 'drop'
+    // Hierarchy (namespace extracted from page_name)
+    namespace: text("namespace").notNull().default(""), // "guides/setup" for "guides/setup/intro"
+    depth: integer("depth").notNull(), // Calculated from namespace depth
+    file_path: text("file_path").notNull(), // Original file path from Logseq graph
+
+    // Type discrimination (Logseq mode)
+    type: text("type").notNull(), // 'page' (always 'page' in Logseq)
+    node_type: text("node_type"), // Deprecated, kept for compatibility
+
+    // Journal pages
+    is_journal: boolean("is_journal").notNull().default(false),
+    journal_date: timestamp("journal_date"), // Date for journal pages
+    source_folder: text("source_folder"), // 'journals' | 'pages'
 
     // Content (for drops/files only)
     content: text("content"), // raw markdown
@@ -114,10 +122,20 @@ export const nodes = pgTable(
     slugIdx: index("nodes_slug_idx").on(table.slug),
     filePathIdx: index("nodes_file_path_idx").on(table.file_path),
 
+    // Logseq-specific indexes
+    pageNameIdx: index("nodes_page_name_idx").on(table.page_name),
+    isJournalIdx: index("nodes_is_journal_idx").on(table.is_journal),
+    journalDateIdx: index("nodes_journal_date_idx").on(table.journal_date),
+    sourceFolderIdx: index("nodes_source_folder_idx").on(table.source_folder),
+
     // Composite indexes for common queries
     planetNamespaceIdx: index("nodes_planet_namespace_idx").on(
       table.planet_id,
       table.namespace
+    ),
+    planetPageNameIdx: index("nodes_planet_page_name_idx").on(
+      table.planet_id,
+      table.page_name
     ),
     namespaceTypeIdx: index("nodes_namespace_type_idx").on(
       table.namespace,
@@ -149,8 +167,8 @@ export type Node = typeof nodes.$inferSelect;
 export type NewNode = typeof nodes.$inferInsert;
 
 /**
- * Node Links: Bidirectional connections between nodes
- * For "related content", "see also", backlinks, etc.
+ * Node Links: Bidirectional connections between nodes and blocks
+ * Supports Logseq page references [[page]], block references ((uuid)), and embeds
  */
 export const nodeLinks = pgTable(
   "node_links",
@@ -162,16 +180,25 @@ export const nodeLinks = pgTable(
     to_node_id: integer("to_node_id")
       .notNull()
       .references(() => nodes.id, { onDelete: "cascade" }),
-    link_type: text("link_type").default("reference"), // 'reference' | 'related' | 'parent' | 'embed'
+    link_type: text("link_type").default("page_ref"), // 'page_ref' | 'block_ref' | 'page_embed' | 'block_embed'
+
+    // Block-level references (Logseq UUIDs)
+    source_block_id: text("source_block_id"), // UUID of source block
+    target_block_id: text("target_block_id"), // UUID of target block (for block refs)
+
     created_at: timestamp("created_at").notNull().defaultNow(),
   },
   (table) => ({
     fromNodeIdx: index("node_links_from_idx").on(table.from_node_id),
     toNodeIdx: index("node_links_to_idx").on(table.to_node_id),
+    sourceBlockIdx: index("node_links_source_block_idx").on(table.source_block_id),
+    targetBlockIdx: index("node_links_target_block_idx").on(table.target_block_id),
     uniqueLink: unique("unique_link").on(
       table.from_node_id,
       table.to_node_id,
-      table.link_type
+      table.link_type,
+      table.source_block_id,
+      table.target_block_id
     ),
   })
 );

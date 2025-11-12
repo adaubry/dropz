@@ -56,6 +56,11 @@ export async function POST(request: NextRequest) {
       type,
       content,
       metadata = {},
+      // Logseq-specific fields
+      page_name,
+      is_journal = false,
+      journal_date,
+      source_folder,
     } = body;
 
     if (!slug || !title || !type) {
@@ -84,12 +89,18 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if node already exists (idempotency check)
+    // For Logseq pages, check by page_name if provided; otherwise use namespace+slug
     const existingNode = await db.query.nodes.findFirst({
-      where: and(
-        eq(nodes.planet_id, workspace.id),
-        eq(nodes.namespace, namespace),
-        eq(nodes.slug, slug)
-      ),
+      where: page_name
+        ? and(
+            eq(nodes.planet_id, workspace.id),
+            eq(nodes.page_name, page_name)
+          )
+        : and(
+            eq(nodes.planet_id, workspace.id),
+            eq(nodes.namespace, namespace),
+            eq(nodes.slug, slug)
+          ),
     });
 
     let resultNode;
@@ -132,6 +143,11 @@ export async function POST(request: NextRequest) {
           parsed_html: parsedHtml,
           metadata: processedMetadata,
           updated_at: new Date(),
+          // Logseq fields
+          page_name: page_name || undefined,
+          is_journal: is_journal,
+          journal_date: journal_date ? new Date(journal_date) : undefined,
+          source_folder: source_folder || undefined,
           ...versionChainUpdate,
         })
         .where(eq(nodes.id, existingNode.id))
@@ -168,6 +184,11 @@ export async function POST(request: NextRequest) {
           content: processedContent,
           parsed_html: parsedHtml,
           metadata: processedMetadata,
+          // Logseq fields
+          page_name: page_name || undefined,
+          is_journal: is_journal,
+          journal_date: journal_date ? new Date(journal_date) : undefined,
+          source_folder: source_folder || undefined,
           ...versionChainData,
         })
         .returning();

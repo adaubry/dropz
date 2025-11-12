@@ -56,6 +56,9 @@ importers:
       '@types/bcryptjs':
         specifier: ^2.4.6
         version: 2.4.6
+      '@types/diff-match-patch':
+        specifier: ^1.0.36
+        version: 1.0.36
       '@types/mdx':
         specifier: ^2.0.13
         version: 2.0.13
@@ -98,6 +101,9 @@ importers:
       commander:
         specifier: ^14.0.2
         version: 14.0.2
+      diff-match-patch:
+        specifier: ^1.0.5
+        version: 1.0.5
       dotenv:
         specifier: ^17.2.3
         version: 17.2.3
