@@ -78,6 +78,13 @@ export const nodes = pgTable(
     content: text("content"), // raw markdown
     parsed_html: text("parsed_html"), // cached rendered HTML
 
+    // Patch-based versioning (blockchain-like)
+    current_version: text("current_version"), // Current state of the content
+    previous_version: text("previous_version"), // Previous state for rollback
+    patch_to_next: text("patch_to_next"), // Diff patch to reconstruct changes
+    version_hash: text("version_hash"), // Hash for integrity verification
+    last_modified_by: integer("last_modified_by").references(() => users.id), // Track who made the change
+
     // Metadata from frontmatter or auto-generated
     metadata: jsonb("metadata").$type<{
       cover?: string;

@@ -10,6 +10,7 @@ import {
 } from "@/lib/queries";
 import { eq, and } from "drizzle-orm";
 import matter from "gray-matter";
+import { createVersionChain, updateVersionChain } from "@/lib/diff";
 
 /**
  * POST /api/nodes
@@ -82,7 +83,7 @@ export async function POST(request: NextRequest) {
       // TODO: Parse markdown to HTML here
     }
 
-    // Check if node already exists
+    // Check if node already exists (idempotency check)
     const existingNode = await db.query.nodes.findFirst({
       where: and(
         eq(nodes.planet_id, workspace.id),
@@ -91,56 +92,91 @@ export async function POST(request: NextRequest) {
       ),
     });
 
-    let resultNode;
+    // Use transaction for atomic operation
+    const { resultNode, existed } = await db.transaction(async (tx) => {
+      if (existingNode) {
+        // Node exists - idempotent update
+        // If content is identical, return existing node (repeat safety)
+        if (processedContent === existingNode.content) {
+          return { resultNode: existingNode, existed: true };
+        }
 
-    if (existingNode) {
-      // Node exists - update it instead
-      // Create backup first
-      await createNodeBackup(session.id, existingNode, "update");
+        // Create backup first
+        await createNodeBackup(session.id, existingNode, "update");
 
-      // Update the node
-      const [updatedNode] = await db
-        .update(nodes)
-        .set({
-          title,
-          type,
-          node_type: getNodeType(depth),
-          content: processedContent,
-          parsed_html: parsedHtml,
-          metadata: processedMetadata,
-          updated_at: new Date(),
-        })
-        .where(eq(nodes.id, existingNode.id))
-        .returning();
+        // Create version chain for content changes (text-only)
+        let versionChainUpdate = {};
+        if (processedContent && type === "file") {
+          const versionChain = updateVersionChain(
+            existingNode.content || "",
+            processedContent
+          );
+          versionChainUpdate = {
+            current_version: versionChain.current_version,
+            previous_version: versionChain.previous_version,
+            version_hash: versionChain.version_hash,
+            last_modified_by: user.id,
+          };
+        }
 
-      resultNode = updatedNode;
-    } else {
-      // Node doesn't exist - create it
-      const [newNode] = await db
-        .insert(nodes)
-        .values({
-          planet_id: workspace.id,
-          slug,
-          title,
-          namespace,
-          depth,
-          file_path: namespace ? `${namespace}/${slug}` : slug,
-          type,
-          node_type: getNodeType(depth),
-          content: processedContent,
-          parsed_html: parsedHtml,
-          metadata: processedMetadata,
-        })
-        .returning();
+        // Update the node
+        const [updatedNode] = await tx
+          .update(nodes)
+          .set({
+            title,
+            type,
+            node_type: getNodeType(depth),
+            content: processedContent,
+            parsed_html: parsedHtml,
+            metadata: processedMetadata,
+            updated_at: new Date(),
+            ...versionChainUpdate,
+          })
+          .where(eq(nodes.id, existingNode.id))
+          .returning();
 
-      // Create backup
-      await createNodeBackup(session.id, newNode, "create");
+        return { resultNode: updatedNode, existed: true };
+      } else {
+        // Node doesn't exist - create it
+        // Create version chain for new content
+        let versionChainData = {};
+        if (processedContent && type === "file") {
+          const versionChain = createVersionChain(null, processedContent);
+          versionChainData = {
+            current_version: versionChain.current_version,
+            previous_version: versionChain.previous_version,
+            version_hash: versionChain.version_hash,
+            last_modified_by: user.id,
+          };
+        }
 
-      resultNode = newNode;
-    }
+        const [newNode] = await tx
+          .insert(nodes)
+          .values({
+            planet_id: workspace.id,
+            slug,
+            title,
+            namespace,
+            depth,
+            file_path: namespace ? `${namespace}/${slug}` : slug,
+            type,
+            node_type: getNodeType(depth),
+            content: processedContent,
+            parsed_html: parsedHtml,
+            metadata: processedMetadata,
+            ...versionChainData,
+          })
+          .returning();
+
+        // Create backup
+        await createNodeBackup(session.id, newNode, "create");
+
+        return { resultNode: newNode, existed: false };
+      }
+    });
 
     revalidateTag("nodes");
-    return NextResponse.json(resultNode, { status: existingNode ? 200 : 201 });
+    return NextResponse.json(resultNode, { status: existed ? 200 : 201 });
   } catch (error: any) {
     console.error("Error creating node:", error);
     return NextResponse.json(
