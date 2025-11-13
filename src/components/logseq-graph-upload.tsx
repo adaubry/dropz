@@ -242,7 +242,7 @@ export function LogseqGraphUpload({
                 title,
                 page_name: parsed.pageName,
                 namespace: parsed.namespace,
-                type: "page", // Always 'page' in Logseq
+                type: "file", // CRITICAL: Must be "file" to trigger markdown rendering
                 is_journal: parsed.isJournal,
                 journal_date: parsed.journalDate?.toISOString(),
                 source_folder: parsed.sourceFolder,
