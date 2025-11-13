@@ -267,6 +267,53 @@ export function LogseqGraphUpload({
           }
         }
 
+        // Create folder nodes for Logseq structure
+        console.log('[Logseq Import] Creating folder nodes...');
+
+        // Create "pages" folder node if it doesn't exist
+        try {
+          await fetch("/api/nodes", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              slug: "pages",
+              title: "Pages",
+              namespace: "",
+              type: "folder",
+              content: "# Pages\n\nAll your Logseq pages are stored here.",
+              metadata: {
+                isLogseqFolder: true,
+                summary: "Logseq pages folder"
+              },
+            }),
+          });
+          console.log('[Logseq Import] Created "pages" folder');
+        } catch (err) {
+          console.log('[Logseq Import] Pages folder might already exist');
+        }
+
+        // Create "journals" folder node if it doesn't exist
+        try {
+          await fetch("/api/nodes", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              slug: "journals",
+              title: "Journals",
+              namespace: "",
+              type: "folder",
+              content: "# Journals\n\nYour Logseq daily journals are stored here.",
+              metadata: {
+                isLogseqFolder: true,
+                summary: "Logseq journals folder"
+              },
+            }),
+          });
+          console.log('[Logseq Import] Created "journals" folder');
+        } catch (err) {
+          console.log('[Logseq Import] Journals folder might already exist');
+        }
+
         // Show result
         const message =
           pagesFailed > 0

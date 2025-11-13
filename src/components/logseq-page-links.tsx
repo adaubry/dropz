@@ -47,7 +47,7 @@ export function LogseqPageLinks({
             {folders.map((folder) => (
               <Link
                 key={folder.id}
-                href={`/${planetSlug}/${[...currentPath, folder.slug].join("/")}`}
+                href={`/${planetSlug}/${folder.page_name || [...currentPath, folder.slug].join("/")}`}
                 className="group flex items-center gap-3 px-4 py-3 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-blue-500 dark:hover:border-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all"
               >
                 <span className="text-2xl">📁</span>
@@ -82,7 +82,7 @@ export function LogseqPageLinks({
               return (
                 <Link
                   key={file.id}
-                  href={`/${planetSlug}/${[...currentPath, file.slug].join("/")}`}
+                  href={`/${planetSlug}/${file.page_name || [...currentPath, file.slug].join("/")}`}
                   className="group flex items-center gap-3 px-4 py-2.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                 >
                   <span className="text-xl">{icon}</span>

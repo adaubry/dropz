@@ -7,7 +7,7 @@
 
 import { db } from "@/db";
 import { nodes } from "@/db/schema";
-import { eq, and, inArray } from "drizzle-orm";
+import { eq, and, or, inArray } from "drizzle-orm";
 import Image from "next/image";
 import { Link } from "@/components/ui/link";
 
@@ -27,10 +27,23 @@ export async function CitedPagesCards({
   }
 
   // Look up all cited pages in the database
+  // pageNames extracted from content are like: ["intro", "setup"]
+  // But database has: ["pages/intro", "pages/setup"]
+  // Need to try both with and without prefix
   const citedPages = await db.query.nodes.findMany({
     where: and(
       eq(nodes.planet_id, planetId),
-      inArray(nodes.page_name, pageNames)
+      or(
+        inArray(nodes.page_name, pageNames),
+        inArray(
+          nodes.page_name,
+          pageNames.map(name => `pages/${name}`)
+        ),
+        inArray(
+          nodes.page_name,
+          pageNames.map(name => `journals/${name}`)
+        )
+      )
     ),
     columns: {
       id: true,
