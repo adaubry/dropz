@@ -12,7 +12,7 @@
  */
 
 import { notFound } from "next/navigation";
-import { getNodeByPath, getNodeChildren, getPlanetBySlug, getUser, getActiveEditingSession } from "@/lib/queries";
+import { getNodeByPath, getNodeChildren, getPlanetBySlug, getUser, getActiveEditingSession, getFolderIndexPage } from "@/lib/queries";
 import { MarkdownPage } from "@/components/markdown-page";
 import { Link } from "@/components/ui/link";
 import Image from "next/image";
@@ -149,6 +149,12 @@ export default async function DynamicPage({
       ? allChildren.filter((c) => c.slug === "pages" || c.slug === "journals")
       : allChildren;
 
+    // Get root index page to extract cited pages
+    const rootIndexPage = await getFolderIndexPage(planetData.id, "");
+    const rootCitedPageNames = rootIndexPage?.content
+      ? getUniquePageReferences(rootIndexPage.content)
+      : [];
+
     console.log(`[DEBUG] Planet root: ${planet}, planetId: ${planetData.id}`);
     console.log(`[DEBUG] All children count: ${allChildren.length}`);
     console.log(`[DEBUG] Filtered children count: ${children.length}`);
@@ -193,6 +199,15 @@ export default async function DynamicPage({
                 : "This planet is empty. Add some content to get started!"}
             </p>
           </div>
+        )}
+
+        {/* Display water cards for cited pages in root index (if any) */}
+        {rootCitedPageNames.length > 0 && (
+          <CitedPagesCards
+            pageNames={rootCitedPageNames}
+            planetId={planetData.id}
+            planetSlug={planet}
+          />
         )}
           </div>
         </main>
@@ -294,6 +309,12 @@ export default async function DynamicPage({
   // Determine which display style to use
   const useLogseqLinks = isLogseqContext(path);
 
+  // Get folder index page (page.md or readme.md) to extract cited pages
+  const folderIndexPage = await getFolderIndexPage(planetData.id, namespace);
+  const citedPageNames = folderIndexPage?.content
+    ? getUniquePageReferences(folderIndexPage.content)
+    : [];
+
   return (
     <>
       {isOwnWorkspace && (
@@ -356,6 +377,15 @@ export default async function DynamicPage({
               : "This folder is empty."}
           </p>
         </div>
+      )}
+
+      {/* Display water cards for cited pages in folder index (if any) */}
+      {citedPageNames.length > 0 && (
+        <CitedPagesCards
+          pageNames={citedPageNames}
+          planetId={planetData.id}
+          planetSlug={planet}
+        />
       )}
         </div>
       </main>
