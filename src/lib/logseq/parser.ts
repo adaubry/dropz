@@ -79,20 +79,23 @@ function parseJournalFile(nameWithoutExt: string, fileName: string): ParsedLogse
   const dateMatch = nameWithoutExt.match(/^(\d{4})_(\d{2})_(\d{2})$/);
 
   let journalDate: Date | null = null;
-  let pageName = nameWithoutExt; // Fallback to raw name
+  let rawPageName = nameWithoutExt; // Fallback to raw name
 
   if (dateMatch) {
     const year = parseInt(dateMatch[1], 10);
     const month = parseInt(dateMatch[2], 10);
     const day = parseInt(dateMatch[3], 10);
     journalDate = new Date(year, month - 1, day); // month is 0-indexed
-    pageName = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
+    rawPageName = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
   }
+
+  // ADD FOLDER PREFIX - pageName now includes "journals/" prefix
+  const pageName = `journals/${rawPageName}`;
 
   return {
     pageName,
-    slug: pageName,
-    namespace: '',
+    slug: rawPageName,
+    namespace: 'journals',
     depth: 0,
     isJournal: true,
     journalDate,
@@ -108,13 +111,17 @@ function parseJournalFile(nameWithoutExt: string, fileName: string): ParsedLogse
  */
 function parsePageFile(nameWithoutExt: string, fileName: string): ParsedLogseqFile {
   // Convert triple underscore to forward slash
-  const pageName = nameWithoutExt.replace(/___/g, '/');
+  const rawPageName = nameWithoutExt.replace(/___/g, '/');
 
-  // Extract namespace and slug
-  const segments = pageName.split('/');
+  // Extract namespace and slug from raw name
+  const segments = rawPageName.split('/');
   const slug = segments[segments.length - 1];
-  const namespace = segments.slice(0, -1).join('/');
-  const depth = Math.max(0, segments.length - 1);
+  const rawNamespace = segments.slice(0, -1).join('/');
+
+  // ADD FOLDER PREFIX - pageName now includes "pages/" prefix
+  const pageName = `pages/${rawPageName}`;
+  const namespace = rawNamespace ? `pages/${rawNamespace}` : 'pages';
+  const depth = segments.length; // depth from pages root
 
   return {
     pageName,

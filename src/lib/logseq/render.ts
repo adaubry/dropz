@@ -16,7 +16,8 @@ export async function processLogseqContent(
   content: string,
   planetId: number,
   planetSlug: string,
-  blockIndex: BlockIndex
+  blockIndex: BlockIndex,
+  currentPageName: string
 ): Promise<string> {
   let processed = content;
 
@@ -32,7 +33,7 @@ export async function processLogseqContent(
   processed = convertBlockReferences(processed, blockIndex, planetSlug);
 
   // 4. Convert page references [[page]] to markdown links (do this AFTER embeds!)
-  processed = convertPageReferences(processed, planetSlug);
+  processed = convertPageReferences(processed, planetSlug, currentPageName);
 
   // 5. Convert properties (key:: value)
   processed = convertProperties(processed);
@@ -55,19 +56,34 @@ export async function processLogseqContent(
  */
 function convertPageReferences(
   content: string,
-  planetSlug: string
+  planetSlug: string,
+  currentPageName: string
 ): string {
   const pageRefRegex = /\[\[([^\]]+)\]\]/g;
 
   return content.replace(pageRefRegex, (match, pageName) => {
-    // URL-encode the page name for the href (handles spaces)
-    const encodedPageName = pageName
+    // Determine folder from current page or reference
+    let fullPath: string;
+
+    if (pageName.startsWith('pages/') || pageName.startsWith('journals/')) {
+      // Already has folder prefix (e.g., [[pages/intro]])
+      fullPath = pageName;
+    } else {
+      // Infer folder from current page's location
+      // If current page is "pages/something", referenced page is also in "pages"
+      // If current page is "journals/2025-11-12", referenced page is in "pages" by default
+      const currentFolder = currentPageName.startsWith('journals/') ? 'pages' : 'pages';
+      fullPath = `${currentFolder}/${pageName}`;
+    }
+
+    // URL-encode the full path for the href (handles spaces)
+    const encodedPath = fullPath
       .split("/")
       .map((segment: string) => encodeURIComponent(segment))
       .join("/");
 
     // Create actual markdown link that will be rendered as <a> tag
-    return `[${pageName}](/${planetSlug}/${encodedPageName})`;
+    return `[${pageName}](/${planetSlug}/${encodedPath})`;
   });
 }
 

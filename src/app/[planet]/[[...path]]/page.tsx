@@ -26,6 +26,9 @@ import { LogseqPageLinks } from "@/components/logseq-page-links";
 import { LogseqMarkdownPreview } from "@/components/logseq-markdown-preview";
 import { CitedPagesCards } from "@/components/cited-pages-cards";
 import { getUniquePageReferences } from "@/lib/logseq/extract-page-refs";
+import { db } from "@/db";
+import { nodes } from "@/db/schema";
+import { eq, and, desc } from "drizzle-orm";
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -256,6 +259,7 @@ export default async function DynamicPage({
             content={node.content}
             planetId={planetData.id}
             planetSlug={planet}
+            pageName={node.page_name || ''}
           />
         ) : (
           <article className="prose prose-lg dark:prose-invert max-w-none">
@@ -306,6 +310,59 @@ export default async function DynamicPage({
   // This works at ANY level - no hardcoded depth checks!
   const namespace = path.length > 0 ? path.join("/") : ""; // Namespace from path
   const children = await getNodeChildren(planetData.id, namespace);
+
+  // Check if this is a Logseq folder (pages or journals)
+  const isLogseqFolder = node.metadata?.isLogseqFolder === true;
+
+  // If it's a Logseq folder, show all Logseq pages from that source folder
+  if (isLogseqFolder) {
+    const sourceFolder = node.slug as 'pages' | 'journals';
+
+    const logseqPages = await db.query.nodes.findMany({
+      where: and(
+        eq(nodes.planet_id, planetData.id),
+        eq(nodes.source_folder, sourceFolder),
+        eq(nodes.type, "file")
+      ),
+      orderBy: sourceFolder === 'journals'
+        ? [desc(nodes.journal_date)]
+        : [nodes.page_name],
+    });
+
+    return (
+      <>
+        {isOwnWorkspace && (
+          <EditingToolbar
+            workspaceSlug={planet}
+            planetId={planetData.id}
+            planetName={planetData.name}
+          />
+        )}
+        <main
+          className="min-h-[calc(100vh-113px)] flex-1 overflow-y-auto p-4 pt-0 "
+          id="main-content"
+        >
+          <div className="container mx-auto p-4 max-w-7xl">
+            <HistoryBreadcrumbs />
+            <div className="mb-8">
+              <h1 className="text-4xl font-bold mb-2">{node.title}</h1>
+              <p className="text-gray-600 dark:text-gray-400">
+                {sourceFolder === 'journals'
+                  ? 'Your daily journal entries'
+                  : 'All your Logseq pages'}
+              </p>
+            </div>
+
+            <LogseqPageLinks
+              pages={logseqPages}
+              planetSlug={planet}
+              currentPath={path}
+            />
+          </div>
+        </main>
+      </>
+    );
+  }
 
   // Determine which display style to use
   const useLogseqLinks = isLogseqContext(path);

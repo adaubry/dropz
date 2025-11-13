@@ -28,6 +28,7 @@ interface LogseqMarkdownPreviewProps {
   content: string
   planetId: number
   planetSlug: string
+  pageName: string
   className?: string
 }
 
@@ -53,6 +54,7 @@ export async function LogseqMarkdownPreview({
   content,
   planetId,
   planetSlug,
+  pageName,
   className,
 }: LogseqMarkdownPreviewProps) {
   try {
@@ -64,7 +66,8 @@ export async function LogseqMarkdownPreview({
       content,
       planetId,
       planetSlug,
-      blockIndex
+      blockIndex,
+      pageName
     )
 
     // Step 3: Pre-process for MDX compatibility
