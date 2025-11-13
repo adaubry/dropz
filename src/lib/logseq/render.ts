@@ -1,15 +1,6 @@
 /**
- * Logseq Markdown Renderer - Complete Implementation
- *
- * Converts Logseq syntax to proper HTML with actual working links.
- * This is the CORE renderer that makes Logseq features work.
- *
- * Features:
- * - Page references [[page]] → Clickable links
- * - Block references ((uuid)) → Resolved content with links
- * - Page embeds {{embed [[page]]}} → Full embedded pages
- * - Block embeds {{embed ((uuid))}} → Embedded blocks
- * - Properties, tasks, highlights, etc.
+ * Logseq Markdown Renderer - Complete Implementation  *
+ * Converts Logseq syntax to proper HTML/Markdown with actual working links.
  */
 
 import { db } from "@/db";
@@ -29,19 +20,21 @@ export async function processLogseqContent(
 ): Promise<string> {
   let processed = content;
 
-  // 1. Convert page references [[page]] to actual markdown links
-  processed = await convertPageReferences(processed, planetSlug);
+  // IMPORTANT: Order matters! Do embeds first (they contain references)
 
-  // 2. Convert block references ((uuid)) to resolved content with links
-  processed = convertBlockReferences(processed, blockIndex, planetSlug);
-
-  // 3. Convert page embeds {{embed [[page]]}} to embedded content
+  // 1. Convert page embeds {{embed [[page]]}} FIRST
   processed = await convertPageEmbeds(processed, planetId, planetSlug);
 
-  // 4. Convert block embeds {{embed ((uuid))}} to embedded content
+  // 2. Convert block embeds {{embed ((uuid))}}
   processed = convertBlockEmbeds(processed, blockIndex, planetSlug);
 
-  // 5. Convert properties (key:: value) to formatted display
+  // 3. Convert block references ((uuid)) to resolved content
+  processed = convertBlockReferences(processed, blockIndex, planetSlug);
+
+  // 4. Convert page references [[page]] to markdown links (do this AFTER embeds!)
+  processed = convertPageReferences(processed, planetSlug);
+
+  // 5. Convert properties (key:: value)
   processed = convertProperties(processed);
 
   // 6. Convert task markers (TODO, DOING, DONE, etc.)
@@ -57,33 +50,25 @@ export async function processLogseqContent(
 }
 
 /**
- * Convert [[page name]] to actual markdown links: [page name](/planet/page-name)
+ * Convert [[page name]] to actual markdown links
+ * Uses replaceAll with callback for proper handling of multiple references
  */
-async function convertPageReferences(
+function convertPageReferences(
   content: string,
   planetSlug: string
-): Promise<string> {
+): string {
   const pageRefRegex = /\[\[([^\]]+)\]\]/g;
-  let processed = content;
 
-  const matches = Array.from(content.matchAll(pageRefRegex));
-
-  for (const match of matches) {
-    const pageName = match[1];
+  return content.replace(pageRefRegex, (match, pageName) => {
     // URL-encode the page name for the href (handles spaces)
     const encodedPageName = pageName
       .split("/")
-      .map((segment) => encodeURIComponent(segment))
+      .map((segment: string) => encodeURIComponent(segment))
       .join("/");
 
     // Create actual markdown link that will be rendered as <a> tag
-    const markdownLink = `[${pageName}](/${planetSlug}/${encodedPageName})`;
-
-    // Replace the Logseq syntax with markdown syntax
-    processed = processed.replace(match[0], markdownLink);
-  }
-
-  return processed;
+    return `[${pageName}](/${planetSlug}/${encodedPageName})`;
+  });
 }
 
 /**
@@ -95,12 +80,8 @@ function convertBlockReferences(
   planetSlug: string
 ): string {
   const blockRefRegex = /\(\(([a-f0-9-]+)\)\)/g;
-  let processed = content;
 
-  const matches = Array.from(content.matchAll(blockRefRegex));
-
-  for (const match of matches) {
-    const uuid = match[1];
+  return content.replace(blockRefRegex, (match, uuid) => {
     const block = blockIndex[uuid];
 
     if (block) {
@@ -110,21 +91,12 @@ function convertBlockReferences(
         .map((s) => encodeURIComponent(s))
         .join("/");
 
-      const replacement = `<span class="logseq-block-ref-resolved">
-        <a href="/${planetSlug}/${encodedPageName}" class="logseq-block-ref-link" title="From: ${escapeHtml(block.pageName)}">
-          ${escapeHtml(block.content)}
-        </a>
-      </span>`;
-
-      processed = processed.replace(match[0], replacement);
+      return `<span class="logseq-block-ref-resolved"><a href="/${planetSlug}/${encodedPageName}" class="logseq-block-ref-link" title="From: ${escapeHtml(block.pageName)}">${escapeHtml(block.content)}</a></span>`;
     } else {
       // Block not found - show placeholder
-      const replacement = `<span class="logseq-block-ref-missing" title="Block not found">((${uuid}))</span>`;
-      processed = processed.replace(match[0], replacement);
+      return `<span class="logseq-block-ref-missing" title="Block not found">((${uuid}))</span>`;
     }
-  }
-
-  return processed;
+  });
 }
 
 /**
@@ -136,12 +108,18 @@ async function convertPageEmbeds(
   planetSlug: string
 ): Promise<string> {
   const pageEmbedRegex = /\{\{embed\s+\[\[([^\]]+)\]\]\}\}/g;
+
+  // Find all embeds first
+  const embeds: Array<{ match: string; pageName: string }> = [];
+  let match;
+  while ((match = pageEmbedRegex.exec(content)) !== null) {
+    embeds.push({ match: match[0], pageName: match[1] });
+  }
+
+  // Process each embed
   let processed = content;
-
-  const matches = Array.from(content.matchAll(pageEmbedRegex));
-
-  for (const match of matches) {
-    const pageName = match[1];
+  for (const embed of embeds) {
+    const { match: embedMatch, pageName } = embed;
 
     // Fetch the page content
     const page = await db.query.nodes.findFirst({
@@ -173,13 +151,13 @@ ${escapeHtml(preview)}${hasMore ? "\n\n..." : ""}
   </div>
 </div>`;
 
-      processed = processed.replace(match[0], replacement);
+      processed = processed.replace(embedMatch, replacement);
     } else {
       // Page not found
       const replacement = `<div class="logseq-page-embed logseq-embed-missing">
   <div class="logseq-embed-header">📄 ${escapeHtml(pageName)} (not found)</div>
 </div>`;
-      processed = processed.replace(match[0], replacement);
+      processed = processed.replace(embedMatch, replacement);
     }
   }
 
@@ -195,12 +173,8 @@ function convertBlockEmbeds(
   planetSlug: string
 ): string {
   const blockEmbedRegex = /\{\{embed\s+\(\(([a-f0-9-]+)\)\)\}\}/g;
-  let processed = content;
 
-  const matches = Array.from(content.matchAll(blockEmbedRegex));
-
-  for (const match of matches) {
-    const uuid = match[1];
+  return content.replace(blockEmbedRegex, (match, uuid) => {
     const block = blockIndex[uuid];
 
     if (block) {
@@ -209,7 +183,7 @@ function convertBlockEmbeds(
         .map((s) => encodeURIComponent(s))
         .join("/");
 
-      const replacement = `<div class="logseq-block-embed">
+      return `<div class="logseq-block-embed">
   <div class="logseq-embed-header">
     <span>🔗</span>
     <a href="/${planetSlug}/${encodedPageName}">Block from ${escapeHtml(block.pageName)}</a>
@@ -218,17 +192,12 @@ function convertBlockEmbeds(
 ${escapeHtml(block.content)}
   </div>
 </div>`;
-
-      processed = processed.replace(match[0], replacement);
     } else {
-      const replacement = `<div class="logseq-block-embed logseq-embed-missing">
+      return `<div class="logseq-block-embed logseq-embed-missing">
   <div class="logseq-embed-header">🔗 Block not found</div>
 </div>`;
-      processed = processed.replace(match[0], replacement);
     }
-  }
-
-  return processed;
+  });
 }
 
 /**
