@@ -255,6 +255,7 @@ export default async function DynamicPage({
           <LogseqMarkdownPreview
             content={node.content}
             planetId={planetData.id}
+            planetSlug={planet}
           />
         ) : (
           <article className="prose prose-lg dark:prose-invert max-w-none">
