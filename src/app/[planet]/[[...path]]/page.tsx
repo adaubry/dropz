@@ -22,9 +22,30 @@ import { EditableMarkdown } from "@/components/editable-markdown";
 import { FolderIndexContent } from "@/components/folder-index-content";
 import { EditablePlanetTitle } from "@/components/editable-planet-title";
 import { HistoryBreadcrumbs } from "@/components/history-breadcrumbs";
+import { LogseqPageLinks } from "@/components/logseq-page-links";
+import { LogseqMarkdownPreview } from "@/components/logseq-markdown-preview";
+import { CitedPagesCards } from "@/components/cited-pages-cards";
+import { getUniquePageReferences } from "@/lib/logseq/extract-page-refs";
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
+
+/**
+ * Helper: Check if we're in a Logseq context
+ * Returns true if we're inside "pages" or "journals" folders
+ */
+function isLogseqContext(path: string[]): boolean {
+  if (path.length === 0) return false;
+  const rootFolder = path[0];
+  return rootFolder === "pages" || rootFolder === "journals";
+}
+
+/**
+ * Helper: Check if we're at planet root showing only "pages" and "journal"
+ */
+function isPlanetRoot(path: string[]): boolean {
+  return path.length === 0;
+}
 
 interface WaterCardProps {
   title: string;
@@ -117,10 +138,20 @@ export default async function DynamicPage({
 
   // If no node found and path is empty, show planet root
   if (!node && path.length === 0) {
-    const children = await getNodeChildren(planetData.id, "");
+    const allChildren = await getNodeChildren(planetData.id, "");
+
+    // For Logseq planets, filter to show only "pages" and "journals" folders
+    // For other planets, show all children
+    const hasLogseqFolders = allChildren.some(
+      (c) => c.slug === "pages" || c.slug === "journals"
+    );
+    const children = hasLogseqFolders
+      ? allChildren.filter((c) => c.slug === "pages" || c.slug === "journals")
+      : allChildren;
 
     console.log(`[DEBUG] Planet root: ${planet}, planetId: ${planetData.id}`);
-    console.log(`[DEBUG] Children count: ${children.length}`);
+    console.log(`[DEBUG] All children count: ${allChildren.length}`);
+    console.log(`[DEBUG] Filtered children count: ${children.length}`);
     console.log(`[DEBUG] Children:`, children.map(c => ({ id: c.id, slug: c.slug, namespace: c.namespace, type: c.type })));
 
     return (
@@ -157,7 +188,9 @@ export default async function DynamicPage({
         ) : (
           <div className="text-center py-12">
             <p className="text-gray-500 dark:text-gray-400">
-              This planet is empty. Add some content to get started!
+              {hasLogseqFolders
+                ? "Upload a Logseq graph to populate pages and journals!"
+                : "This planet is empty. Add some content to get started!"}
             </p>
           </div>
         )}
@@ -171,6 +204,14 @@ export default async function DynamicPage({
 
   // If it's a file (drop), render its markdown content
   if (node.type === "file") {
+    // Check if this is a Logseq page (has page_name field)
+    const isLogseqPage = !!node.page_name;
+
+    // Extract page references for cited pages cards
+    const citedPageNames = node.content
+      ? getUniquePageReferences(node.content)
+      : [];
+
     return (
       <>
         {isOwnWorkspace && (
@@ -180,7 +221,7 @@ export default async function DynamicPage({
             planetName={planetData.name}
           />
         )}
-        
+
         <main
           className="min-h-[calc(100vh-113px)] flex-1 overflow-y-auto p-4 pt-0 "
           id="main-content"
@@ -194,35 +235,51 @@ export default async function DynamicPage({
         {/* History-based breadcrumb navigation */}
         <HistoryBreadcrumbs />
 
-        {/* Main content */}
-        <article className="prose prose-lg dark:prose-invert max-w-none">
-          <h1 className="text-4xl font-bold mb-4">{node.title}</h1>
+        {/* Main content - use Logseq preview for Logseq pages */}
+        {isLogseqPage && node.content ? (
+          <LogseqMarkdownPreview
+            content={node.content}
+            planetId={planetData.id}
+          />
+        ) : (
+          <article className="prose prose-lg dark:prose-invert max-w-none">
+            <h1 className="text-4xl font-bold mb-4">{node.title}</h1>
 
-          {node.metadata?.cover && (
-            <Image
-              loading={imageCount++ < 15 ? "eager" : "lazy"}
-              decoding="sync"
-              src={node.metadata.cover as string}
-              alt={node.title}
-              width={800}
-              height={400}
-              quality={80}
-              className="w-full h-64 object-cover  lg mb-6"
-            />
-          )}
+            {node.metadata?.cover && (
+              <Image
+                loading={imageCount++ < 15 ? "eager" : "lazy"}
+                decoding="sync"
+                src={node.metadata.cover as string}
+                alt={node.title}
+                width={800}
+                height={400}
+                quality={80}
+                className="w-full h-64 object-cover lg mb-6"
+              />
+            )}
 
-          {node.content && (
-            <div className="mt-6">
-              <div className="prose prose-lg dark:prose-invert max-w-none">
-                {node.parsed_html ? (
-                  <div dangerouslySetInnerHTML={{ __html: node.parsed_html }} />
-                ) : (
-                  <div>{node.content}</div>
-                )}
+            {node.content && (
+              <div className="mt-6">
+                <div className="prose prose-lg dark:prose-invert max-w-none">
+                  {node.parsed_html ? (
+                    <div dangerouslySetInnerHTML={{ __html: node.parsed_html }} />
+                  ) : (
+                    <div>{node.content}</div>
+                  )}
+                </div>
               </div>
-            </div>
-          )}
-        </article>
+            )}
+          </article>
+        )}
+
+        {/* Display water cards for cited pages (Logseq requirement) */}
+        {citedPageNames.length > 0 && (
+          <CitedPagesCards
+            pageNames={citedPageNames}
+            planetId={planetData.id}
+            planetSlug={planet}
+          />
+        )}
           </div>
         </main>
       </>
@@ -233,6 +290,9 @@ export default async function DynamicPage({
   // This works at ANY level - no hardcoded depth checks!
   const namespace = path.length > 0 ? path.join("/") : ""; // Namespace from path
   const children = await getNodeChildren(planetData.id, namespace);
+
+  // Determine which display style to use
+  const useLogseqLinks = isLogseqContext(path);
 
   return (
     <>
@@ -265,23 +325,35 @@ export default async function DynamicPage({
       {/* Show folder index page (page.md) if exists */}
       <FolderIndexContent planetId={planetData.id} namespace={namespace} />
 
-      {/* Show children - works at any depth (Problem 7 solution) */}
+      {/* Show children - either as Logseq links or water cards */}
       {children.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {children.map((child) => (
-            <EditableCard
-              key={child.id}
-              node={child}
-              href={`/${planet}/${[...path, child.slug].join("/")}`}
-              imageCount={imageCount++}
-              isEditing={isEditingActive}
-            />
-          ))}
-        </div>
+        useLogseqLinks ? (
+          // Logseq-style links for pages inside "pages" or "journals"
+          <LogseqPageLinks
+            pages={children}
+            planetSlug={planet}
+            currentPath={path}
+          />
+        ) : (
+          // Water cards for planet root and oceans
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {children.map((child) => (
+              <EditableCard
+                key={child.id}
+                node={child}
+                href={`/${planet}/${[...path, child.slug].join("/")}`}
+                imageCount={imageCount++}
+                isEditing={isEditingActive}
+              />
+            ))}
+          </div>
+        )
       ) : (
         <div className="text-center py-12">
           <p className="text-gray-500 dark:text-gray-400">
-            This folder is empty.
+            {useLogseqLinks
+              ? "No pages yet. Upload a Logseq graph to get started!"
+              : "This folder is empty."}
           </p>
         </div>
       )}
