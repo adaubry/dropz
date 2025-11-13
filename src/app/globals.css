@@ -456,6 +456,27 @@ textarea {
   @apply text-gray-700 dark:text-gray-300 leading-relaxed;
 }
 
+/* Missing/Broken References */
+.logseq-block-ref-missing {
+  @apply inline-flex items-center px-2 py-1 rounded-md bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400;
+  @apply border border-red-200 dark:border-red-800 text-xs font-mono;
+}
+
+.logseq-embed-missing {
+  @apply my-4 p-4 rounded-lg border-2 border-red-200 dark:border-red-800;
+  @apply bg-red-50 dark:bg-red-900/10;
+}
+
+.logseq-embed-missing .logseq-embed-header {
+  @apply text-red-700 dark:text-red-400;
+}
+
+/* Block Reference Links */
+.logseq-block-ref-link {
+  @apply text-purple-800 dark:text-purple-200 hover:text-purple-600 dark:hover:text-purple-100;
+  @apply no-underline hover:underline;
+}
+
 /* Logseq Content Container */
 .logseq-content {
   @apply max-w-none;
@@ -502,4 +523,36 @@ textarea {
 
 .logseq-content pre code {
   @apply p-0 bg-transparent;
+}
+
+/* Page Reference Links (now actual <a> tags from markdown links) */
+.logseq-content a {
+  @apply inline-flex items-center px-2 py-0.5 rounded-md;
+  @apply bg-blue-50 text-blue-700 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-300 dark:hover:bg-blue-900/50;
+  @apply border border-blue-200 dark:border-blue-700;
+  @apply no-underline font-medium text-sm transition-colors;
+}
+
+.logseq-content a::before {
+  content: "[[";
+  @apply opacity-50 mr-1;
+}
+
+.logseq-content a::after {
+  content: "]]";
+  @apply opacity-50 ml-1;
+}
+
+/* Links in embed headers should not have the brackets */
+.logseq-page-embed .logseq-embed-header a,
+.logseq-block-embed .logseq-embed-header a {
+  @apply px-0 py-0 bg-transparent border-0;
+  @apply font-semibold underline hover:no-underline;
+}
+
+.logseq-page-embed .logseq-embed-header a::before,
+.logseq-page-embed .logseq-embed-header a::after,
+.logseq-block-embed .logseq-embed-header a::before,
+.logseq-block-embed .logseq-embed-header a::after {
+  content: none;
 }

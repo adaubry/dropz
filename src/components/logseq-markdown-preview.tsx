@@ -2,11 +2,10 @@ import { compileMDX } from 'next-mdx-remote/rsc'
 import remarkGfm from 'remark-gfm'
 import rehypeHighlight from 'rehype-highlight'
 import rehypeRaw from 'rehype-raw'
-import { remarkLogseq } from '@/lib/remark-logseq'
 import { MDXContent } from './mdx-component'
 import { useMDXComponents } from './mdx-component'
-import { resolveAllReferencesOptimized } from '@/lib/logseq/references'
 import { getCachedBlockIndex } from '@/lib/logseq/cache'
+import { processLogseqContent } from '@/lib/logseq/render'
 
 /**
  * Pre-process markdown content to fix HTML self-closing tags for MDX compatibility
@@ -28,50 +27,56 @@ function preprocessMarkdownForMDX(source: string): string {
 interface LogseqMarkdownPreviewProps {
   content: string
   planetId: number
+  planetSlug: string
   className?: string
 }
 
 /**
- * Renders Logseq markdown with OPTIMIZED reference resolution
+ * Renders Logseq markdown with FULL Logseq compatibility
+ *
+ * Features:
+ * - Page references [[page]] → Actual clickable links
+ * - Block references ((uuid)) → Resolved content with source links
+ * - Page embeds {{embed [[page]]}} → Full embedded pages
+ * - Block embeds {{embed ((uuid))}} → Embedded blocks
+ * - Properties (key:: value) → Formatted key-value pairs
+ * - Tasks (TODO, DOING, DONE) → Styled task markers
+ * - Highlights ==text== → Highlighted text
+ * - Priorities [#A] [#B] [#C] → Priority badges
  *
  * Performance:
  * - Uses cached block index for O(1) block reference lookups
  * - Cache TTL: 1 hour (rebuild on expiry or manual invalidation)
  * - O(R) resolution where R = number of references (not O(N*M)!)
- *
- * Features:
- * - Resolves block references ((uuid)) to actual content
- * - Resolves page embeds {{embed [[page]]}}
- * - Resolves block embeds {{embed ((uuid))}}
- * - XSS protection with HTML escaping
- * - Graceful fallback for missing references
  */
 export async function LogseqMarkdownPreview({
   content,
   planetId,
+  planetSlug,
   className,
 }: LogseqMarkdownPreviewProps) {
   try {
     // Step 1: Get cached block index (O(1) on cache hit)
     const blockIndex = await getCachedBlockIndex(planetId)
 
-    // Step 2: Resolve all references using cached index (O(R))
-    const resolvedContent = await resolveAllReferencesOptimized(
+    // Step 2: Process ALL Logseq syntax and convert to proper HTML/Markdown
+    const processedContent = await processLogseqContent(
       content,
       planetId,
+      planetSlug,
       blockIndex
     )
 
     // Step 3: Pre-process for MDX compatibility
-    const processed = preprocessMarkdownForMDX(resolvedContent)
+    const mdxReady = preprocessMarkdownForMDX(processedContent)
 
-    // Step 4: Compile MDX with Logseq plugins
+    // Step 4: Compile MDX (now with real links from step 2)
     const { content: mdxContent, frontmatter } = await compileMDX({
-      source: processed,
+      source: mdxReady,
       options: {
         parseFrontmatter: true,
         mdxOptions: {
-          remarkPlugins: [remarkLogseq, remarkGfm],
+          remarkPlugins: [remarkGfm],
           rehypePlugins: [rehypeRaw as any, rehypeHighlight],
           development: process.env.NODE_ENV === 'development',
         },
@@ -81,7 +86,7 @@ export async function LogseqMarkdownPreview({
 
     return (
       <div className="container mx-auto px-4 py-8 max-w-4xl">
-        {/* Render frontmatter if present (legacy support) */}
+        {/* Render frontmatter if present (Logseq properties at top of page) */}
         {frontmatter && (
           <div className="mb-8">
             {(frontmatter as any).title && (
@@ -115,47 +120,6 @@ export async function LogseqMarkdownPreview({
             {error instanceof Error ? error.message : 'Unknown error occurred'}
           </p>
         </div>
-      </div>
-    )
-  }
-}
-
-/**
- * Fast preview version (without reference resolution)
- * Use for list views where full reference resolution is unnecessary
- *
- * Performance: O(1) - no database queries, no reference resolution
- */
-export async function LogseqMarkdownPreviewFast({
-  content,
-  className,
-}: Omit<LogseqMarkdownPreviewProps, 'planetId'>) {
-  try {
-    const processed = preprocessMarkdownForMDX(content)
-
-    const { content: mdxContent } = await compileMDX({
-      source: processed,
-      options: {
-        parseFrontmatter: true,
-        mdxOptions: {
-          remarkPlugins: [remarkLogseq, remarkGfm],
-          rehypePlugins: [rehypeRaw as any, rehypeHighlight],
-          development: process.env.NODE_ENV === 'development',
-        },
-      },
-      components: useMDXComponents({}),
-    })
-
-    return (
-      <MDXContent className={`logseq-content ${className || ''}`}>
-        {mdxContent}
-      </MDXContent>
-    )
-  } catch (error) {
-    console.error('[Logseq Markdown Fast] Error rendering:', error)
-    return (
-      <div className="text-sm text-gray-500 dark:text-gray-400">
-        Failed to render preview
       </div>
     )
   }
