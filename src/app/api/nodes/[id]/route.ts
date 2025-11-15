@@ -9,7 +9,6 @@ import {
   getActiveEditingSession,
   createNodeBackup,
 } from "@/lib/queries";
-import matter from "gray-matter";
 
 /**
  * GET /api/nodes/[id]
@@ -98,12 +97,7 @@ export async function PUT(
     }
 
     const body = await request.json();
-    const { title, slug, content, metadata, order } = body;
-
-    // Idempotency check: If content hasn't changed, return existing node
-    if (content && content === existingNode.content) {
-      return NextResponse.json(existingNode);
-    }
+    const { title, slug, metadata, order } = body;
 
     // Create backup before modification
     await createNodeBackup(session.id, existingNode, "update");
@@ -111,18 +105,8 @@ export async function PUT(
     // Check if slug is changing
     const slugChanged = slug && slug !== existingNode.slug;
 
-    // Process content if it's markdown
-    let parsedHtml = existingNode.parsed_html;
+    // Process metadata
     let processedMetadata = metadata || existingNode.metadata;
-
-    if (content && existingNode.type === "file") {
-      const { data: frontmatter, content: markdownContent } = matter(content);
-      processedMetadata = {
-        ...processedMetadata,
-        ...frontmatter,
-      };
-      // TODO: Parse markdown to HTML here
-    }
 
     // If slug changed, we need to cascade updates to children
     if (slugChanged && existingNode.type === "folder") {
@@ -176,8 +160,6 @@ export async function PUT(
         title: title || existingNode.title,
         slug: slug || existingNode.slug,
         file_path: newFilePath,
-        content: content || existingNode.content,
-        parsed_html: parsedHtml,
         metadata: processedMetadata,
         order: order !== undefined ? order : existingNode.order,
         updated_at: new Date(),

@@ -132,14 +132,17 @@ export async function POST(req: NextRequest) {
           type: 'file',
           depth: page.namespace.split('/').filter(Boolean).length,
 
-          // Pre-rendered HTML from Rust tool
+          // Pre-rendered HTML from Rust tool (NEW way)
           parsed_html: page.html,
+
+          // Explicitly clear deprecated content field
+          content: null,
 
           // Metadata from export
           metadata: {
             ...page.metadata,
             export_date: new Date().toISOString(),
-            // rust_tool_version: await getRustToolVersion(), // TODO
+            rust_tool_used: true, // Mark that this was processed by Rust tool
           },
 
           source_folder: page.pageName.startsWith('journals/') ? 'journals' : 'pages',

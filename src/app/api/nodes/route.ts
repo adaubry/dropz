@@ -9,7 +9,6 @@ import {
   createNodeBackup,
 } from "@/lib/queries";
 import { eq, and } from "drizzle-orm";
-import matter from "gray-matter";
 import { invalidateBlockIndexCache } from "@/lib/logseq/cache";
 
 /**
@@ -73,20 +72,8 @@ export async function POST(request: NextRequest) {
     // Calculate depth from namespace
     const depth = namespace ? namespace.split("/").length : 0;
 
-    // Parse markdown if it's a file
-    let parsedHtml = null;
-    let processedContent = content;
+    // Metadata (no content processing - use Rust export tool for Logseq pages)
     let processedMetadata = { ...metadata };
-
-    if (type === "file" && content) {
-      const { data: frontmatter, content: markdownContent } = matter(content);
-      processedContent = content; // Keep full content with frontmatter
-      processedMetadata = {
-        ...processedMetadata,
-        ...frontmatter,
-      };
-      // TODO: Parse markdown to HTML here
-    }
 
     // Check if node already exists (idempotency check)
     // For Logseq pages, check by page_name if provided; otherwise use namespace+slug
@@ -108,12 +95,6 @@ export async function POST(request: NextRequest) {
 
     if (existingNode) {
       // Node exists - idempotent update
-      // If content is identical, return existing node (repeat safety)
-      if (processedContent === existingNode.content) {
-        revalidateTag("nodes");
-        return NextResponse.json(existingNode, { status: 200 });
-      }
-
       // Create backup first
       await createNodeBackup(session.id, existingNode, "update");
 
@@ -123,8 +104,6 @@ export async function POST(request: NextRequest) {
         .set({
           title,
           type,
-          content: processedContent,
-          parsed_html: parsedHtml,
           metadata: processedMetadata,
           updated_at: new Date(),
           // Logseq fields
@@ -151,8 +130,6 @@ export async function POST(request: NextRequest) {
           depth,
           file_path: namespace ? `${namespace}/${slug}` : slug,
           type,
-          content: processedContent,
-          parsed_html: parsedHtml,
           metadata: processedMetadata,
           // Logseq fields
           page_name: page_name || undefined,
