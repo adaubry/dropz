@@ -237,6 +237,10 @@ async function createConfig(
   config = config.replace('{{INPUT_DIR}}', inputDir);
   config = config.replace('{{OUTPUT_DIR}}', outputDir);
 
+  // Add absolute path to Rhai script (required field)
+  const scriptPath = path.join(process.cwd(), 'export-logseq-notes.rhai');
+  config = config.replace('export-logseq-notes.rhai', scriptPath);
+
   // Add optional filters
   if (options.includeTags && options.includeTags.length > 0) {
     config += `\ninclude_tags = ${JSON.stringify(options.includeTags)}`;
@@ -254,11 +258,17 @@ async function createConfig(
   await fs.writeFile(configPath, config);
   console.log('[Rust Export] Config written to:', configPath);
   console.log('[Rust Export] Config content:\n', config);
+  console.log('[Rust Export] Script path:', scriptPath);
   return configPath;
 }
 
 /**
  * Read exported HTML files from output directory
+ *
+ * CRITICAL: Handles Logseq's ___ (triple underscore) namespace convention
+ * - Logseq filename: "Community___Query Learning Sprint.md"
+ * - Means: page "Community/Query Learning Sprint" in namespace "Community"
+ * - Since namespace_dirs=false, Rust tool outputs flat: "Community___Query Learning Sprint.html"
  */
 async function readExportedFiles(
   outputDir: string,
@@ -280,51 +290,64 @@ async function readExportedFiles(
     originalMarkdown?: string;
   }> = [];
 
-  async function walk(dir: string, basePath = ''): Promise<void> {
-    const entries = await fs.readdir(dir, { withFileTypes: true });
+  // Read files from output directory (should be flat since namespace_dirs=false)
+  const entries = await fs.readdir(outputDir, { withFileTypes: true });
 
-    for (const entry of entries) {
-      const fullPath = path.join(dir, entry.name);
-      const relativePath = path.join(basePath, entry.name);
-
-      if (entry.isDirectory()) {
-        await walk(fullPath, relativePath);
-      } else if (entry.name.endsWith('.html')) {
-        // Convert file path to page name
-        // e.g., guides/setup.html → guides/setup
-        const pageName = relativePath.replace('.html', '');
-
-        // Extract namespace and slug
-        const parts = pageName.split('/');
-        const slug = parts[parts.length - 1];
-        const namespace = parts.slice(0, -1).join('/');
-
-        // Try to find original markdown file
-        let originalMarkdown: string | undefined;
-        try {
-          const mdPath = path.join(
-            graphPath,
-            'pages',
-            pageName.replace(/\//g, '___') + '.md'
-          );
-          originalMarkdown = await fs.readFile(mdPath, 'utf-8');
-        } catch {
-          // Original markdown not found, that's okay
-        }
-
-        files.push({
-          fullPath,
-          relativePath,
-          pageName,
-          namespace,
-          slug,
-          originalMarkdown,
-        });
-      }
+  for (const entry of entries) {
+    if (!entry.isFile() || !entry.name.endsWith('.html')) {
+      continue;
     }
+
+    const fullPath = path.join(outputDir, entry.name);
+
+    // Remove .html extension
+    // e.g., "Community___Query Learning Sprint.html" → "Community___Query Learning Sprint"
+    const filenameWithoutExt = entry.name.replace('.html', '');
+
+    // Convert ___ (triple underscore) to / (slash) for namespaces
+    // This is Logseq's convention for representing hierarchies in flat filenames
+    // e.g., "Community___Query Learning Sprint" → "Community/Query Learning Sprint"
+    const pageName = filenameWithoutExt.replace(/___/g, '/');
+
+    // Extract namespace and slug from page name
+    // e.g., "Community/Query Learning Sprint" → namespace="Community", slug="Query Learning Sprint"
+    const parts = pageName.split('/');
+    const slug = parts[parts.length - 1];
+    const namespace = parts.slice(0, -1).join('/');
+
+    // Try to find original markdown file
+    // Original filename uses ___ for hierarchy
+    let originalMarkdown: string | undefined;
+    try {
+      // Try pages directory first
+      let mdPath = path.join(graphPath, 'pages', filenameWithoutExt + '.md');
+      try {
+        originalMarkdown = await fs.readFile(mdPath, 'utf-8');
+      } catch {
+        // Try journals directory
+        mdPath = path.join(graphPath, 'journals', filenameWithoutExt + '.md');
+        originalMarkdown = await fs.readFile(mdPath, 'utf-8');
+      }
+    } catch {
+      // Original markdown not found, that's okay
+      console.log(`[Rust Export] No original markdown found for: ${filenameWithoutExt}`);
+    }
+
+    files.push({
+      fullPath,
+      relativePath: entry.name,
+      pageName,
+      namespace,
+      slug,
+      originalMarkdown,
+    });
+
+    console.log(`[Rust Export] Parsed file: ${entry.name}`);
+    console.log(`  → pageName: "${pageName}"`);
+    console.log(`  → namespace: "${namespace}"`);
+    console.log(`  → slug: "${slug}"`);
   }
 
-  await walk(outputDir);
   return files;
 }
 
