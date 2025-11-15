@@ -7,12 +7,17 @@ import os from "os";
 
 /**
  * POST /api/ingest
+ *
+ * ⚠️ DEPRECATED: This endpoint uses the old ingestion system that populates
+ * the deprecated 'content' field. For Logseq graphs, use /api/ingest-logseq instead.
+ *
  * Upload and ingest files directly to user's workspace
  * Expects multipart/form-data with:
  * - directory: Path to directory to ingest (server-side)
  * - clear: Boolean to clear existing content
  */
 export async function POST(request: NextRequest) {
+  console.warn('[DEPRECATED] /api/ingest is deprecated. Use /api/ingest-logseq for Logseq graphs.');
   try {
     const user = await getUser();
     if (!user) {

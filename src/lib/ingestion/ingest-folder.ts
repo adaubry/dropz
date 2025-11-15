@@ -1,6 +1,9 @@
 /**
  * File Ingestion System
  *
+ * ⚠️ DEPRECATED: This ingestion system populates the deprecated 'content' field.
+ * For Logseq graphs, use the Rust export tool via /api/ingest-logseq instead.
+ *
  * Recursively scans a folder structure and ingests markdown files
  * into the nodes table with proper namespace hierarchy.
  *
@@ -10,6 +13,8 @@
  * - Generates virtual folders automatically
  * - Parses markdown to HTML and caches it
  * - Updates existing nodes if modified
+ *
+ * NOTE: This system should only be used for non-Logseq content.
  */
 
 import fs from "fs/promises";

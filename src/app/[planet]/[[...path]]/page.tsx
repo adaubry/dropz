@@ -253,24 +253,30 @@ export default async function DynamicPage({
         {/* History-based breadcrumb navigation */}
         <HistoryBreadcrumbs />
 
-        {/* Main content - use static renderer if HTML is pre-rendered, otherwise fallback to dynamic */}
+        {/* Main content - Logseq pages use pre-rendered HTML ONLY */}
         {isLogseqPage ? (
-          // Logseq page rendering
+          // Logseq page rendering - ONLY use parsed_html from Rust export tool
           node.parsed_html ? (
-            // NEW: Pre-rendered HTML from Rust export tool
             <StaticContentRenderer
               html={node.parsed_html}
               className="prose prose-lg dark:prose-invert max-w-none"
             />
-          ) : node.content ? (
-            // FALLBACK: Dynamic rendering with old parser (for backwards compatibility)
-            <LogseqMarkdownPreview
-              content={node.content}
-              planetId={planetData.id}
-              planetSlug={planet}
-              pageName={node.page_name || ''}
-            />
-          ) : null
+          ) : (
+            // If parsed_html is missing, show error message
+            <div className="prose prose-lg dark:prose-invert max-w-none">
+              <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-6">
+                <h3 className="text-lg font-semibold text-yellow-800 dark:text-yellow-200 mb-2">
+                  Content Not Available
+                </h3>
+                <p className="text-yellow-700 dark:text-yellow-300 mb-4">
+                  This Logseq page has not been properly ingested. Please re-upload your Logseq graph.
+                </p>
+                <p className="text-sm text-yellow-600 dark:text-yellow-400">
+                  Logseq pages require the Rust export tool to generate pre-rendered HTML.
+                </p>
+              </div>
+            </div>
+          )
         ) : (
           // Regular page rendering
           <article className="prose prose-lg dark:prose-invert max-w-none">
