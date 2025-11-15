@@ -186,139 +186,44 @@ export function LogseqGraphUpload({
 
         console.log(`[Logseq Import] Processing ${logseqFiles.length} Logseq files`);
 
-        setUploadProgress(`Processing ${logseqFiles.length} pages...`);
+        setUploadProgress('Exporting graph with Rust tool...');
 
-        let pagesCreated = 0;
-        let pagesFailed = 0;
-        const errors: string[] = [];
+        // NEW: Use Rust export API endpoint
+        // Create FormData with all files
+        const formData = new FormData();
 
-        // Process each file
-        for (let i = 0; i < logseqFiles.length; i++) {
-          const { file, relativePath } = logseqFiles[i];
+        for (const { file, relativePath } of logseqFiles) {
+          // Extract relevant path (after root folder name)
+          const parts = relativePath.replace(/\\/g, "/").split("/");
+          const relevantPath = parts.slice(1).join("/");
 
-          setUploadProgress(
-            `Processing ${i + 1}/${logseqFiles.length}: ${file.name}`,
-          );
-
-          try {
-            // Extract relevant path (after root folder name)
-            const parts = relativePath.replace(/\\/g, "/").split("/");
-            const relevantPath = parts.slice(1).join("/");
-
-            // Parse the Logseq file name
-            const parsed = parseLogseqFileName(relevantPath);
-
-            if (!parsed) {
-              console.warn(`[Logseq Import] Skipping invalid file: ${file.name}`);
-              pagesFailed++;
-              errors.push(`Invalid Logseq file format: ${file.name}`);
-              continue;
-            }
-
-            console.log(`[Logseq Import] Parsing: ${file.name}`, {
-              pageName: parsed.pageName,
-              namespace: parsed.namespace,
-              depth: parsed.depth,
-              isJournal: parsed.isJournal,
-            });
-
-            // Read file content
-            const content = await file.text();
-
-            // Parse properties from content
-            const properties = parsePageProperties(content);
-
-            // Extract title from properties or use page name
-            const title = properties.title || parsed.slug.replace(/-/g, " ").replace(/\b\w/g, (l: string) => l.toUpperCase());
-
-            // Create the page via API
-            const response = await fetch("/api/nodes", {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({
-                slug: parsed.slug,
-                title,
-                page_name: parsed.pageName,
-                namespace: parsed.namespace,
-                type: "file", // CRITICAL: Must be "file" to trigger markdown rendering
-                is_journal: parsed.isJournal,
-                journal_date: parsed.journalDate?.toISOString(),
-                source_folder: parsed.sourceFolder,
-                content,
-                metadata: properties,
-              }),
-            });
-
-            if (!response.ok) {
-              const data = await response.json();
-              console.error(`[Logseq Import] Failed to import ${file.name}:`, data.error);
-              pagesFailed++;
-              errors.push(`${file.name}: ${data.error}`);
-            } else {
-              console.log(`[Logseq Import] Successfully imported: ${parsed.pageName}`);
-              pagesCreated++;
-            }
-          } catch (err: any) {
-            console.error(`[Logseq Import] Exception processing ${file.name}:`, err);
-            pagesFailed++;
-            errors.push(`${file.name}: ${err.message}`);
-          }
+          // Add file with its relative path as the name
+          const renamedFile = new File([file], relevantPath, { type: file.type });
+          formData.append('files', renamedFile);
         }
 
-        // Create folder nodes for Logseq structure
-        console.log('[Logseq Import] Creating folder nodes...');
+        console.log('[Logseq Import] Uploading to Rust export API...');
 
-        // Create "pages" folder node if it doesn't exist
-        try {
-          await fetch("/api/nodes", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              slug: "pages",
-              title: "Pages",
-              namespace: "",
-              type: "folder",
-              content: "# Pages\n\nAll your Logseq pages are stored here.",
-              metadata: {
-                isLogseqFolder: true,
-                summary: "Logseq pages folder"
-              },
-            }),
-          });
-          console.log('[Logseq Import] Created "pages" folder');
-        } catch (err) {
-          console.log('[Logseq Import] Pages folder might already exist');
+        // Call the new API endpoint
+        const response = await fetch('/api/ingest-logseq', {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (!response.ok) {
+          const data = await response.json();
+          throw new Error(data.error || 'Import failed');
         }
 
-        // Create "journals" folder node if it doesn't exist
-        try {
-          await fetch("/api/nodes", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              slug: "journals",
-              title: "Journals",
-              namespace: "",
-              type: "folder",
-              content: "# Journals\n\nYour Logseq daily journals are stored here.",
-              metadata: {
-                isLogseqFolder: true,
-                summary: "Logseq journals folder"
-              },
-            }),
-          });
-          console.log('[Logseq Import] Created "journals" folder');
-        } catch (err) {
-          console.log('[Logseq Import] Journals folder might already exist');
-        }
+        const result = await response.json();
+
+        console.log('[Logseq Import] Import complete:', result.stats);
 
         // Show result
-        const message =
-          pagesFailed > 0
-            ? `Imported ${pagesCreated} page(s) successfully. ${pagesFailed} page(s) failed.\n\nErrors:\n${errors.slice(0, 5).join("\n")}${errors.length > 5 ? `\n... and ${errors.length - 5} more` : ""}`
-            : `Successfully imported ${pagesCreated} Logseq page(s)!`;
+        const { created, updated, skipped, total } = result.stats;
+        const message = skipped > 0
+          ? `Imported ${created + updated} page(s) successfully (${created} new, ${updated} updated). ${skipped} page(s) skipped.`
+          : `Successfully imported ${total} Logseq page(s)! (${created} new, ${updated} updated)`;
 
         alert(message);
         router.refresh();

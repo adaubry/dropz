@@ -1,0 +1,11 @@
+<article class="logseq-content prose dark:prose-invert max-w-none" data-page="{{title}}">
+  {{#if created_time}}
+  <div class="hidden metadata"
+       data-created="{{date_format created_time "%Y-%m-%d"}}"
+       data-updated="{{date_format edited_time "%Y-%m-%d"}}"
+       data-tags="{{tags}}">
+  </div>
+  {{/if}}
+
+  {{{body}}}
+</article>
