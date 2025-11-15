@@ -296,7 +296,6 @@ export async function createNodeBackup(
         depth: node.depth,
         file_path: node.file_path,
         type: node.type,
-        node_type: node.node_type,
         content: node.content,
         parsed_html: node.parsed_html,
         metadata: node.metadata,
@@ -339,8 +338,6 @@ function calculateNodeDiff(
   if (currentNode.file_path !== snapshot.file_path)
     diff.file_path = snapshot.file_path;
   if (currentNode.type !== snapshot.type) diff.type = snapshot.type;
-  if (currentNode.node_type !== snapshot.node_type)
-    diff.node_type = snapshot.node_type;
   if (currentNode.content !== snapshot.content) diff.content = snapshot.content;
   if (currentNode.parsed_html !== snapshot.parsed_html)
     diff.parsed_html = snapshot.parsed_html;
@@ -397,7 +394,6 @@ export async function discardEditingSession(sessionId: number): Promise<void> {
         depth: backup.snapshot.depth,
         file_path: backup.snapshot.file_path,
         type: backup.snapshot.type,
-        node_type: backup.snapshot.node_type,
         content: backup.snapshot.content,
         parsed_html: backup.snapshot.parsed_html,
         metadata: backup.snapshot.metadata,

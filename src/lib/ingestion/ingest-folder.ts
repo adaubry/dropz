@@ -174,7 +174,6 @@ async function ingestFile(
     depth,
     file_path: relativePath,
     type: "file",
-    node_type: getNodeType(depth),
     content: fileContent,
     parsed_html: parsedHtml,
     metadata,
@@ -197,11 +196,6 @@ async function ingestFile(
     await db.insert(nodes).values(nodeData);
     console.log(`  ✓ Ingested: ${relativePath}`);
   }
-}
-
-function getNodeType(depth: number): string {
-  const types = ["ocean", "sea", "river", "drop"];
-  return types[Math.min(depth, 3)] || "drop";
 }
 
 function extractSummary(content: string, length = 150): string {
@@ -269,7 +263,6 @@ async function generateVirtualFolders(planetId: number) {
         depth,
         file_path: folderPath,
         type: "folder",
-        node_type: getNodeType(depth),
         metadata: { auto_generated: true },
       });
 

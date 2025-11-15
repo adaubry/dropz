@@ -10,7 +10,6 @@ import {
   createNodeBackup,
 } from "@/lib/queries";
 import matter from "gray-matter";
-import { updateVersionChain } from "@/lib/diff";
 
 /**
  * GET /api/nodes/[id]
@@ -170,21 +169,6 @@ export async function PUT(
       newFilePath = pathParts.join("/");
     }
 
-    // Create version chain for content changes (text-only)
-    let versionChainUpdate = {};
-    if (content && existingNode.type === "file") {
-      const versionChain = updateVersionChain(
-        existingNode.content || "",
-        content
-      );
-      versionChainUpdate = {
-        current_version: versionChain.current_version,
-        previous_version: versionChain.previous_version,
-        version_hash: versionChain.version_hash,
-        last_modified_by: user.id,
-      };
-    }
-
     // Update the node (atomic operation via database)
     const [updatedNode] = await db
       .update(nodes)
@@ -197,7 +181,6 @@ export async function PUT(
         metadata: processedMetadata,
         order: order !== undefined ? order : existingNode.order,
         updated_at: new Date(),
-        ...versionChainUpdate,
       })
       .where(eq(nodes.id, nodeId))
       .returning();
