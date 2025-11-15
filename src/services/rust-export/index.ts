@@ -37,10 +37,29 @@ export const RustExportService = {
 async function validateInstallation(): Promise<boolean> {
   try {
     const { stdout } = await execAsync('which export-logseq-notes');
-    return Boolean(stdout.trim());
-  } catch (error) {
+    const toolPath = stdout.trim();
+
+    if (!toolPath) {
+      console.error('[Rust Export] export-logseq-notes not found in PATH');
+      console.error('[Rust Export] Install with: cargo install --git https://github.com/dimfeld/export-logseq-notes.git');
+      return false;
+    }
+
+    console.log('[Rust Export] Tool found at:', toolPath);
+
+    // Try to get version info
+    try {
+      const { stdout: versionOut } = await execAsync('export-logseq-notes --version');
+      console.log('[Rust Export] Version:', versionOut.trim());
+    } catch (versionError) {
+      console.warn('[Rust Export] Could not get version info:', versionError);
+    }
+
+    return true;
+  } catch (error: any) {
     console.error('[Rust Export] export-logseq-notes not found in PATH');
-    console.error('[Rust Export] Install with: cargo install export-logseq-notes');
+    console.error('[Rust Export] Error details:', error.message);
+    console.error('[Rust Export] Install with: cargo install --git https://github.com/dimfeld/export-logseq-notes.git');
     return false;
   }
 }
@@ -77,20 +96,51 @@ async function exportGraph(
   try {
     // 4. Run export
     console.log('[Rust Export] Running export-logseq-notes...');
+    console.log('[Rust Export] Command: export-logseq-notes --config', configPath);
+
     const { stdout, stderr } = await execAsync(
       `export-logseq-notes --config "${configPath}"`,
       { maxBuffer: 10 * 1024 * 1024 } // 10MB buffer for large outputs
     );
 
-    if (stdout) console.log('[Rust Export] stdout:', stdout);
-    if (stderr) console.log('[Rust Export] stderr:', stderr);
+    console.log('[Rust Export] Command completed');
+
+    if (stdout) {
+      console.log('[Rust Export] stdout:', stdout);
+    } else {
+      console.warn('[Rust Export] No stdout from Rust tool');
+    }
+
+    if (stderr) {
+      console.log('[Rust Export] stderr:', stderr);
+    }
 
     const duration = Date.now() - startTime;
     console.log('[Rust Export] Export completed in', duration, 'ms');
 
     // 5. Read exported files
+    console.log('[Rust Export] Reading exported files from:', outputDir);
+
+    // First, check if output directory exists and has content
+    try {
+      const dirContents = await fs.readdir(outputDir);
+      console.log('[Rust Export] Output directory contains:', dirContents);
+
+      if (dirContents.length === 0) {
+        console.error('[Rust Export] ERROR: Output directory is empty! Rust tool may have failed silently.');
+      }
+    } catch (dirError: any) {
+      console.error('[Rust Export] ERROR: Cannot read output directory:', dirError.message);
+    }
+
     const htmlFiles = await readExportedFiles(outputDir, graphPath);
     console.log('[Rust Export] Found', htmlFiles.length, 'exported pages');
+
+    if (htmlFiles.length === 0) {
+      console.error('[Rust Export] ERROR: No HTML files found after export!');
+      console.error('[Rust Export] This indicates the Rust tool did not generate any output.');
+      console.error('[Rust Export] Check the config file and graph structure.');
+    }
 
     // 6. Parse and structure results
     const results: ExportedPage[] = [];
@@ -124,10 +174,35 @@ async function exportGraph(
         duration,
       },
     };
-  } catch (error) {
+  } catch (error: any) {
+    // Enhanced error logging
+    console.error('[Rust Export] EXPORT FAILED');
+    console.error('[Rust Export] Error type:', error.constructor.name);
+    console.error('[Rust Export] Error message:', error.message);
+
+    if (error.code) {
+      console.error('[Rust Export] Error code:', error.code);
+    }
+
+    if (error.stderr) {
+      console.error('[Rust Export] Process stderr:', error.stderr);
+    }
+
+    if (error.stdout) {
+      console.error('[Rust Export] Process stdout:', error.stdout);
+    }
+
+    console.error('[Rust Export] Full error:', error);
+
     // Cleanup on error
     await cleanup(outputDir, configPath);
-    throw error;
+
+    // Re-throw with more context
+    throw new Error(
+      `Rust export failed: ${error.message}. ` +
+      `Check server logs for details. ` +
+      `Ensure export-logseq-notes is installed: cargo install --git https://github.com/dimfeld/export-logseq-notes.git`
+    );
   }
 }
 
@@ -147,6 +222,15 @@ async function createConfig(
 
   // Read template
   const templatePath = path.join(process.cwd(), 'export-config.template.toml');
+  console.log('[Rust Export] Reading template from:', templatePath);
+
+  try {
+    await fs.access(templatePath);
+  } catch (accessError: any) {
+    console.error('[Rust Export] ERROR: Template file not found at:', templatePath);
+    throw new Error(`Export config template not found at ${templatePath}. Ensure the file exists in your project root.`);
+  }
+
   let config = await fs.readFile(templatePath, 'utf-8');
 
   // Replace placeholders
@@ -168,6 +252,8 @@ async function createConfig(
   }
 
   await fs.writeFile(configPath, config);
+  console.log('[Rust Export] Config written to:', configPath);
+  console.log('[Rust Export] Config content:\n', config);
   return configPath;
 }
 

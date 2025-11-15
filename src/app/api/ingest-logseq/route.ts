@@ -68,12 +68,45 @@ export async function POST(req: NextRequest) {
 
     // 5. Run Rust export
     console.log('[Logseq Import] Running Rust export...');
-    const exportResult = await RustExportService.exportGraph(tempDir, {
-      planetSlug: workspace.slug,
-      template: 'dropz',
-    });
+    console.log('[Logseq Import] Temp directory:', tempDir);
+    console.log('[Logseq Import] Workspace slug:', workspace.slug);
+
+    let exportResult;
+    try {
+      exportResult = await RustExportService.exportGraph(tempDir, {
+        planetSlug: workspace.slug,
+        template: 'dropz',
+      });
+    } catch (exportError: any) {
+      console.error('[Logseq Import] Rust export failed:', exportError);
+
+      // Cleanup temp directory
+      await fs.rm(tempDir, { recursive: true, force: true });
+
+      return NextResponse.json(
+        {
+          error: 'Export failed',
+          details: exportError.message,
+          hint: 'The Rust export tool may not be installed. Check server logs for details.',
+        },
+        { status: 500 }
+      );
+    }
 
     console.log(`[Logseq Import] Exported ${exportResult.pages.length} pages`);
+
+    if (exportResult.pages.length === 0) {
+      console.warn('[Logseq Import] No pages exported from graph');
+      await fs.rm(tempDir, { recursive: true, force: true });
+
+      return NextResponse.json(
+        {
+          error: 'No pages exported',
+          details: 'The Rust tool did not export any pages. Check that your graph has valid markdown files in pages/ or journals/ directories.',
+        },
+        { status: 400 }
+      );
+    }
 
     // 6. Import to database
     let created = 0;
@@ -99,9 +132,8 @@ export async function POST(req: NextRequest) {
           type: 'file',
           depth: page.namespace.split('/').filter(Boolean).length,
 
-          // Store both original and rendered
-          content: page.originalMarkdown || '',
-          parsed_html: page.html, // Pre-rendered HTML from Rust tool
+          // Pre-rendered HTML from Rust tool
+          parsed_html: page.html,
 
           // Metadata from export
           metadata: {
@@ -159,11 +191,17 @@ export async function POST(req: NextRequest) {
     });
 
   } catch (error: any) {
-    console.error('[Logseq Import] Error:', error);
+    console.error('[Logseq Import] IMPORT FAILED');
+    console.error('[Logseq Import] Error type:', error.constructor.name);
+    console.error('[Logseq Import] Error message:', error.message);
+    console.error('[Logseq Import] Stack trace:', error.stack);
+
     return NextResponse.json(
       {
         error: 'Import failed',
         details: error.message,
+        errorType: error.constructor.name,
+        hint: 'Check server logs for detailed error information. Ensure export-logseq-notes is installed.',
       },
       { status: 500 }
     );
@@ -192,7 +230,7 @@ async function createLogseqFolders(planetId: number) {
         namespace: '',
         type: 'folder',
         depth: 0,
-        content: '# Pages\n\nAll your Logseq pages are stored here.',
+        file_path: 'pages',
         metadata: {
           isLogseqFolder: true,
           summary: 'Logseq pages folder',
@@ -220,7 +258,7 @@ async function createLogseqFolders(planetId: number) {
         namespace: '',
         type: 'folder',
         depth: 0,
-        content: '# Journals\n\nYour Logseq daily journals are stored here.',
+        file_path: 'journals',
         metadata: {
           isLogseqFolder: true,
           summary: 'Logseq journals folder',
