@@ -81,9 +81,8 @@ export const nodes = pgTable(
     journal_date: timestamp("journal_date"), // Date for journal pages
     source_folder: text("source_folder"), // 'journals' | 'pages'
 
-    // Content (for files only)
-    content: text("content"), // raw markdown
-    parsed_html: text("parsed_html"), // cached rendered HTML
+    // Content (pre-rendered HTML from Rust export tool only)
+    parsed_html: text("parsed_html"), // Pre-rendered HTML from export-logseq-notes
 
     // Metadata from frontmatter or auto-generated
     metadata: jsonb("metadata").$type<{
@@ -144,13 +143,7 @@ export const nodes = pgTable(
       table.type
     ),
 
-    // Full-text search on content
-    contentSearchIdx: index("nodes_content_search_idx").using(
-      "gin",
-      sql`to_tsvector('english', COALESCE(${table.content}, ''))`
-    ),
-
-    // Search on title
+    // Full-text search on title
     titleSearchIdx: index("nodes_title_search_idx").using(
       "gin",
       sql`to_tsvector('english', ${table.title})`
@@ -272,7 +265,6 @@ export const nodeBackups = pgTable(
       depth: number;
       file_path: string;
       type: string;
-      content: string | null;
       parsed_html: string | null;
       metadata: any;
       order: number | null;

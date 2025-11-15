@@ -18,15 +18,12 @@ import { Link } from "@/components/ui/link";
 import Image from "next/image";
 import { EditingToolbar } from "@/components/editing-toolbar";
 import { EditableCard } from "@/components/editable-card";
-import { EditableMarkdown } from "@/components/editable-markdown";
 import { FolderIndexContent } from "@/components/folder-index-content";
 import { EditablePlanetTitle } from "@/components/editable-planet-title";
 import { HistoryBreadcrumbs } from "@/components/history-breadcrumbs";
 import { LogseqPageLinks } from "@/components/logseq-page-links";
-import { LogseqMarkdownPreview } from "@/components/logseq-markdown-preview";
 import { StaticContentRenderer } from "@/components/static-content-renderer";
 import { CitedPagesCards } from "@/components/cited-pages-cards";
-import { getUniquePageReferences } from "@/lib/logseq/extract-page-refs";
 import { db } from "@/db";
 import { nodes } from "@/db/schema";
 import { eq, and, desc } from "drizzle-orm";
@@ -226,9 +223,8 @@ export default async function DynamicPage({
     const isLogseqPage = !!node.page_name;
 
     // Extract page references for cited pages cards
-    // NEW: Use metadata.page_refs from Rust export if available
-    const citedPageNames = node.metadata?.page_refs ||
-      (node.content ? getUniquePageReferences(node.content) : []);
+    // Use metadata.page_refs from Rust export
+    const citedPageNames = node.metadata?.page_refs || [];
 
     return (
       <>
@@ -295,14 +291,10 @@ export default async function DynamicPage({
               />
             )}
 
-            {node.content && (
+            {node.parsed_html && (
               <div className="mt-6">
                 <div className="prose prose-lg dark:prose-invert max-w-none">
-                  {node.parsed_html ? (
-                    <div dangerouslySetInnerHTML={{ __html: node.parsed_html }} />
-                  ) : (
-                    <div>{node.content}</div>
-                  )}
+                  <div dangerouslySetInnerHTML={{ __html: node.parsed_html }} />
                 </div>
               </div>
             )}
