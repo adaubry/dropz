@@ -4,11 +4,17 @@
 data = "{{INPUT_DIR}}"
 product = "logseq"
 output = "{{OUTPUT_DIR}}"
-template = "dropz"
+script = "export-logseq-notes.rhai"
 extension = "html"
 
-# Namespace handling - create directories for namespaced pages
-namespace_dirs = true
+# Use inline template - just output the body HTML
+# We'll wrap it in our own React components
+template_string = "{{{body}}}"
+
+# Namespace handling - KEEP FILES FLAT
+# Logseq uses ___ in filenames for namespaces (e.g., Community___Sub Page.md)
+# We'll parse these ourselves rather than letting the tool create directories
+namespace_dirs = false
 
 # Link handling
 filter_link_only_blocks = true
