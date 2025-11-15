@@ -84,10 +84,11 @@ Visit `http://localhost:3000` to see your site!
   - Backup & restore
 
 **Special Features:**
-- **[Logseq Integration](./LOGSEQ_DEMO.md)** - Logseq-style markdown support
-  - Block references
-  - Bidirectional links
-  - Special syntax
+- **[Logseq Integration](./LOGSEQ_DEMO.md)** - Logseq graph support
+  - Full graph uploads with Rust-powered pre-rendering
+  - Block references and bidirectional links
+  - Special syntax support
+  - 3.6x faster page loads
 
 ### 📚 Archive
 
@@ -96,6 +97,9 @@ Historical documentation (for reference only):
 - **[Database Revamp](./archive/DATABASE_REVAMP_COMPLETE.md)** - Unified nodes system migration
 - **[Hierarchy Fix](./archive/HIERARCHY_FIX.md)** - Namespace-based hierarchy implementation
 - **[Performance Revamp Implementation](./archive/PERFORMANCE_REVAMP_IMPLEMENTATION.md)** - Original performance optimization implementation summary
+- **[Logseq Revamp Masterplan](./archive/LOGSEQ_REVAMP_MASTERPLAN.md)** - Strategic plan for Logseq integration (completed)
+- **[Rust Export Integration Design](./archive/RUST_EXPORT_INTEGRATION_DESIGN.md)** - Technical design for Rust tool integration (completed)
+- **[Rust Integration Complete](./archive/RUST_INTEGRATION_COMPLETE.md)** - Implementation summary and completion report
 
 ---
 
@@ -131,7 +135,7 @@ dropz/
 │   ├── CRUD_GUIDELINES.md     # CRUD patterns & best practices
 │   ├── MARKDOWN_AND_MDX.md    # Markdown/MDX guide
 │   ├── DEPLOY_TO_VERCEL.md    # Deployment guide
-│   ├── PERFORMANCE_REVAMP.md  # Performance guide
+│   ├── PERFORMANCE_GUIDELINES.md  # Performance guide
 │   ├── USER_PROFILE_AND_EDITING.md  # User features
 │   ├── LOGSEQ_DEMO.md         # Logseq integration
 │   └── archive/               # Historical docs
@@ -151,6 +155,9 @@ dropz/
 │   │   ├── node-editor.tsx    # Content editor
 │   │   └── ...
 │   │
+│   ├── services/              # Backend services
+│   │   └── rust-export/       # Rust export tool integration
+│   │
 │   ├── db/                    # Database config & schema
 │   │   └── schema.ts          # Drizzle schema
 │   │
@@ -158,11 +165,16 @@ dropz/
 │       ├── queries.ts         # 🎯 ALL database queries
 │       ├── session.ts         # Auth helpers
 │       ├── ingestion/         # Folder ingestion
+│       ├── logseq/            # Logseq parsing utilities
 │       └── ...
 │
 ├── drizzle/                   # Database migrations
 │   ├── schema.ts              # Schema definitions
 │   └── migrations/            # SQL migrations
+│
+├── templates/                 # Export templates
+│   ├── dropz.tmpl             # Custom Handlebars template
+│   └── README.md              # Template documentation
 │
 └── scripts/                   # CLI tools
     └── ingest.ts              # Folder ingestion script

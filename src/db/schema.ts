@@ -73,25 +73,17 @@ export const nodes = pgTable(
     depth: integer("depth").notNull(), // Calculated from namespace depth
     file_path: text("file_path").notNull(), // Original file path from Logseq graph
 
-    // Type discrimination (Logseq mode)
-    type: text("type").notNull(), // 'page' (always 'page' in Logseq)
-    node_type: text("node_type"), // Deprecated, kept for compatibility
+    // Type discrimination
+    type: text("type").notNull(), // 'file' | 'folder'
 
     // Journal pages
     is_journal: boolean("is_journal").notNull().default(false),
     journal_date: timestamp("journal_date"), // Date for journal pages
     source_folder: text("source_folder"), // 'journals' | 'pages'
 
-    // Content (for drops/files only)
+    // Content (for files only)
     content: text("content"), // raw markdown
     parsed_html: text("parsed_html"), // cached rendered HTML
-
-    // Patch-based versioning (blockchain-like)
-    current_version: text("current_version"), // Current state of the content
-    previous_version: text("previous_version"), // Previous state for rollback
-    patch_to_next: text("patch_to_next"), // Diff patch to reconstruct changes
-    version_hash: text("version_hash"), // Hash for integrity verification
-    last_modified_by: integer("last_modified_by").references(() => users.id), // Track who made the change
 
     // Metadata from frontmatter or auto-generated
     metadata: jsonb("metadata").$type<{
@@ -280,7 +272,6 @@ export const nodeBackups = pgTable(
       depth: number;
       file_path: string;
       type: string;
-      node_type: string | null;
       content: string | null;
       parsed_html: string | null;
       metadata: any;

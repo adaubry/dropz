@@ -10,7 +10,6 @@ import {
 } from "@/lib/queries";
 import { eq, and } from "drizzle-orm";
 import matter from "gray-matter";
-import { createVersionChain, updateVersionChain } from "@/lib/diff";
 import { invalidateBlockIndexCache } from "@/lib/logseq/cache";
 
 /**
@@ -118,28 +117,12 @@ export async function POST(request: NextRequest) {
       // Create backup first
       await createNodeBackup(session.id, existingNode, "update");
 
-      // Create version chain for content changes (text-only)
-      let versionChainUpdate = {};
-      if (processedContent && type === "file") {
-        const versionChain = updateVersionChain(
-          existingNode.content || "",
-          processedContent
-        );
-        versionChainUpdate = {
-          current_version: versionChain.current_version,
-          previous_version: versionChain.previous_version,
-          version_hash: versionChain.version_hash,
-          last_modified_by: user.id,
-        };
-      }
-
       // Update the node (atomic operation via database)
       const [updatedNode] = await db
         .update(nodes)
         .set({
           title,
           type,
-          node_type: getNodeType(depth),
           content: processedContent,
           parsed_html: parsedHtml,
           metadata: processedMetadata,
@@ -149,7 +132,6 @@ export async function POST(request: NextRequest) {
           is_journal: is_journal,
           journal_date: journal_date ? new Date(journal_date) : undefined,
           source_folder: source_folder || undefined,
-          ...versionChainUpdate,
         })
         .where(eq(nodes.id, existingNode.id))
         .returning();
@@ -158,18 +140,6 @@ export async function POST(request: NextRequest) {
       existed = true;
     } else {
       // Node doesn't exist - create it
-      // Create version chain for new content
-      let versionChainData = {};
-      if (processedContent && type === "file") {
-        const versionChain = createVersionChain(null, processedContent);
-        versionChainData = {
-          current_version: versionChain.current_version,
-          previous_version: versionChain.previous_version,
-          version_hash: versionChain.version_hash,
-          last_modified_by: user.id,
-        };
-      }
-
       // Insert node (atomic operation via database, unique constraint prevents duplicates)
       const [newNode] = await db
         .insert(nodes)
@@ -181,7 +151,6 @@ export async function POST(request: NextRequest) {
           depth,
           file_path: namespace ? `${namespace}/${slug}` : slug,
           type,
-          node_type: getNodeType(depth),
           content: processedContent,
           parsed_html: parsedHtml,
           metadata: processedMetadata,
@@ -190,7 +159,6 @@ export async function POST(request: NextRequest) {
           is_journal: is_journal,
           journal_date: journal_date ? new Date(journal_date) : undefined,
           source_folder: source_folder || undefined,
-          ...versionChainData,
         })
         .returning();
 
@@ -216,7 +184,3 @@ export async function POST(request: NextRequest) {
   }
 }
 
-function getNodeType(depth: number): string {
-  const types = ["ocean", "sea", "river", "drop"];
-  return types[Math.min(depth, 3)] || "drop";
-}

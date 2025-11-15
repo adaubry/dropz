@@ -29,8 +29,10 @@ Visit `http://localhost:3000` to see your site!
 - 📝 **Markdown & MDX** - Full support with syntax highlighting
 - 🗂️ **Unlimited Depth** - Namespace-based hierarchy (no depth limits)
 - 👤 **User Workspaces** - Personal planets with editing mode
-- 🔍 **Full-Text Search** - Find content instantly
-- 📊 **Logseq Support** - Block references and bidirectional links
+- 📊 **Logseq Integration** - Full graph support with Rust-powered pre-rendering
+  - Block references and bidirectional links
+  - Upload entire Logseq graphs
+  - 3.6x faster page loads vs dynamic parsing
 
 ## Documentation
 
@@ -61,6 +63,7 @@ Essential guides:
 - Server Components
 - Edge runtime
 - Aggressive caching
+- Rust export tool integration (pre-rendered HTML)
 
 ## Architecture Highlights
 
@@ -101,9 +104,11 @@ dropz/
 │   ├── app/           # Next.js App Router
 │   ├── components/    # React components
 │   ├── db/            # Database schema
-│   └── lib/           # Utilities & queries
+│   ├── lib/           # Utilities & queries
+│   └── services/      # Backend services (Rust export, etc.)
 ├── drizzle/           # Database migrations
-└── scripts/           # CLI tools
+├── scripts/           # CLI tools
+└── templates/         # Export templates
 ```
 
 ## Common Commands
