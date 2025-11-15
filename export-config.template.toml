@@ -1,0 +1,25 @@
+# Dropz Logseq Export Configuration Template
+# This file is populated at runtime with actual paths
+
+data = "{{INPUT_DIR}}"
+product = "logseq"
+output = "{{OUTPUT_DIR}}"
+template = "dropz"
+extension = "html"
+
+# Namespace handling - create directories for namespaced pages
+namespace_dirs = true
+
+# Link handling
+filter_link_only_blocks = true
+
+# CSS classes (match Tailwind/Dropz styles)
+class_bold = "font-bold"
+class_italic = "italic"
+class_strikethrough = "line-through"
+class_highlight = "bg-yellow-200 dark:bg-yellow-800"
+class_page_link = "text-blue-600 hover:underline dark:text-blue-400"
+class_tag = "inline-block px-2 py-1 text-xs rounded bg-gray-100 dark:bg-gray-800"
+
+# Syntax highlighting
+highlight_class_prefix = "hljs-"

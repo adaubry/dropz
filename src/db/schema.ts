@@ -101,6 +101,16 @@ export const nodes = pgTable(
       date?: string;
       author?: string;
       sidebar_position?: number;
+
+      // Rust export metadata
+      page_refs?: string[];      // [[Page]] references found during export
+      block_refs?: string[];     // ((uuid)) references found during export
+      export_date?: string;      // When this was exported by Rust tool
+      rust_tool_version?: string; // Version of export-logseq-notes used
+
+      // Logseq folder markers
+      isLogseqFolder?: boolean;  // True for virtual /pages and /journals folders
+
       [key: string]: any;
     }>(),
 

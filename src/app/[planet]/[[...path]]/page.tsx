@@ -24,6 +24,7 @@ import { EditablePlanetTitle } from "@/components/editable-planet-title";
 import { HistoryBreadcrumbs } from "@/components/history-breadcrumbs";
 import { LogseqPageLinks } from "@/components/logseq-page-links";
 import { LogseqMarkdownPreview } from "@/components/logseq-markdown-preview";
+import { StaticContentRenderer } from "@/components/static-content-renderer";
 import { CitedPagesCards } from "@/components/cited-pages-cards";
 import { getUniquePageReferences } from "@/lib/logseq/extract-page-refs";
 import { db } from "@/db";
@@ -154,9 +155,8 @@ export default async function DynamicPage({
 
     // Get root index page to extract cited pages
     const rootIndexPage = await getFolderIndexPage(planetData.id, "");
-    const rootCitedPageNames = rootIndexPage?.content
-      ? getUniquePageReferences(rootIndexPage.content)
-      : [];
+    const rootCitedPageNames = rootIndexPage?.metadata?.page_refs ||
+      (rootIndexPage?.content ? getUniquePageReferences(rootIndexPage.content) : []);
 
     console.log(`[DEBUG] Planet root: ${planet}, planetId: ${planetData.id}`);
     console.log(`[DEBUG] All children count: ${allChildren.length}`);
@@ -226,9 +226,9 @@ export default async function DynamicPage({
     const isLogseqPage = !!node.page_name;
 
     // Extract page references for cited pages cards
-    const citedPageNames = node.content
-      ? getUniquePageReferences(node.content)
-      : [];
+    // NEW: Use metadata.page_refs from Rust export if available
+    const citedPageNames = node.metadata?.page_refs ||
+      (node.content ? getUniquePageReferences(node.content) : []);
 
     return (
       <>
@@ -253,15 +253,26 @@ export default async function DynamicPage({
         {/* History-based breadcrumb navigation */}
         <HistoryBreadcrumbs />
 
-        {/* Main content - use Logseq preview for Logseq pages */}
-        {isLogseqPage && node.content ? (
-          <LogseqMarkdownPreview
-            content={node.content}
-            planetId={planetData.id}
-            planetSlug={planet}
-            pageName={node.page_name || ''}
-          />
+        {/* Main content - use static renderer if HTML is pre-rendered, otherwise fallback to dynamic */}
+        {isLogseqPage ? (
+          // Logseq page rendering
+          node.parsed_html ? (
+            // NEW: Pre-rendered HTML from Rust export tool
+            <StaticContentRenderer
+              html={node.parsed_html}
+              className="prose prose-lg dark:prose-invert max-w-none"
+            />
+          ) : node.content ? (
+            // FALLBACK: Dynamic rendering with old parser (for backwards compatibility)
+            <LogseqMarkdownPreview
+              content={node.content}
+              planetId={planetData.id}
+              planetSlug={planet}
+              pageName={node.page_name || ''}
+            />
+          ) : null
         ) : (
+          // Regular page rendering
           <article className="prose prose-lg dark:prose-invert max-w-none">
             <h1 className="text-4xl font-bold mb-4">{node.title}</h1>
 
