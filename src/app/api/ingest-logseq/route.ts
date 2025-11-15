@@ -1,11 +1,10 @@
 /**
  * Logseq Graph Import API
- * Uses Rust export tool to convert Logseq graphs to pre-rendered HTML
+ * REVAMPED: Direct markdown processing, bypassing Rust tool for now
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getUser, getUserWorkspace } from '@/lib/queries';
-import { RustExportService } from '@/services/rust-export';
 import { db } from '@/db';
 import { nodes } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
@@ -13,8 +12,42 @@ import { revalidateTag } from 'next/cache';
 import fs from 'fs/promises';
 import path from 'path';
 import os from 'os';
+import matter from 'gray-matter';
+
+// Import markdown processing
+import { unified } from 'unified';
+import remarkParse from 'remark-parse';
+import remarkGfm from 'remark-gfm';
+import remarkRehype from 'remark-rehype';
+import rehypeRaw from 'rehype-raw';
+import rehypeStringify from 'rehype-stringify';
+import rehypeHighlight from 'rehype-highlight';
+
+/**
+ * Convert markdown to HTML using unified pipeline
+ */
+async function markdownToHtml(markdown: string): Promise<string> {
+  try {
+    const result = await unified()
+      .use(remarkParse)
+      .use(remarkGfm)
+      .use(remarkRehype, { allowDangerousHtml: true })
+      .use(rehypeRaw)
+      .use(rehypeHighlight)
+      .use(rehypeStringify, { allowDangerousHtml: true })
+      .process(markdown);
+
+    return String(result);
+  } catch (error) {
+    console.error('[Logseq Import] Markdown conversion error:', error);
+    // Return wrapped markdown as fallback
+    return `<pre>${markdown}</pre>`;
+  }
+}
 
 export async function POST(req: NextRequest) {
+  const startTime = Date.now();
+
   try {
     // 1. Authenticate
     const user = await getUser();
@@ -36,117 +69,90 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'No files provided' }, { status: 400 });
     }
 
-    console.log(`[Logseq Import] Received ${files.length} files`);
+    console.log(`[Logseq Import] Received ${files.length} files for workspace: ${workspace.slug}`);
 
-    // 4. Extract files to temp directory
-    const tempDir = path.join(os.tmpdir(), `logseq-graph-${Date.now()}`);
-    await fs.mkdir(tempDir, { recursive: true });
-
-    // Create pages and journals directories
-    const pagesDir = path.join(tempDir, 'pages');
-    const journalsDir = path.join(tempDir, 'journals');
-    await fs.mkdir(pagesDir, { recursive: true });
-    await fs.mkdir(journalsDir, { recursive: true });
-
-    // Write files to temp directory
-    for (const file of files) {
-      const fileName = file.name;
-      let targetPath: string;
-
-      // Determine if this is a page or journal file
-      if (fileName.includes('journals/') || fileName.match(/^\d{4}_\d{2}_\d{2}\.md$/)) {
-        targetPath = path.join(journalsDir, fileName.replace('journals/', ''));
-      } else {
-        targetPath = path.join(pagesDir, fileName.replace('pages/', ''));
-      }
-
-      const buffer = Buffer.from(await file.arrayBuffer());
-      await fs.writeFile(targetPath, buffer);
-    }
-
-    console.log('[Logseq Import] Files extracted to:', tempDir);
-
-    // 5. Run Rust export
-    console.log('[Logseq Import] Running Rust export...');
-    console.log('[Logseq Import] Temp directory:', tempDir);
-    console.log('[Logseq Import] Workspace slug:', workspace.slug);
-
-    let exportResult;
-    try {
-      exportResult = await RustExportService.exportGraph(tempDir, {
-        planetSlug: workspace.slug,
-        template: 'dropz',
-      });
-    } catch (exportError: any) {
-      console.error('[Logseq Import] Rust export failed:', exportError);
-
-      // Cleanup temp directory
-      await fs.rm(tempDir, { recursive: true, force: true });
-
-      return NextResponse.json(
-        {
-          error: 'Export failed',
-          details: exportError.message,
-          hint: 'The Rust export tool may not be installed. Check server logs for details.',
-        },
-        { status: 500 }
-      );
-    }
-
-    console.log(`[Logseq Import] Exported ${exportResult.pages.length} pages`);
-
-    if (exportResult.pages.length === 0) {
-      console.warn('[Logseq Import] No pages exported from graph');
-      await fs.rm(tempDir, { recursive: true, force: true });
-
-      return NextResponse.json(
-        {
-          error: 'No pages exported',
-          details: 'The Rust tool did not export any pages. Check that your graph has valid markdown files in pages/ or journals/ directories.',
-        },
-        { status: 400 }
-      );
-    }
-
-    // 6. Import to database
+    // 4. Process files directly (no temp directory, no Rust tool)
     let created = 0;
     let updated = 0;
     let skipped = 0;
 
-    for (const page of exportResult.pages) {
+    for (const file of files) {
       try {
+        // Only process markdown files
+        if (!file.name.endsWith('.md')) {
+          console.log(`[Logseq Import] Skipping non-markdown file: ${file.name}`);
+          skipped++;
+          continue;
+        }
+
+        // Read file content
+        const buffer = Buffer.from(await file.arrayBuffer());
+        const content = buffer.toString('utf-8');
+
+        // Parse frontmatter
+        const { data: frontmatter, content: markdownContent } = matter(content);
+
+        // Determine source folder (pages or journals)
+        const isJournal = file.name.includes('journals/') || /^\d{4}_\d{2}_\d{2}\.md$/.test(file.name);
+        const sourceFolder = isJournal ? 'journals' : 'pages';
+
+        // Extract filename without extension and path
+        const fileName = file.name
+          .replace('pages/', '')
+          .replace('journals/', '')
+          .replace('.md', '');
+
+        // Convert ___ (triple underscore) to / for namespaces
+        // e.g., "Community___Query Learning Sprint" → "Community/Query Learning Sprint"
+        const pageName = fileName.replace(/___/g, '/');
+
+        // Extract namespace and slug
+        const parts = pageName.split('/');
+        const slug = parts[parts.length - 1];
+        const namespace = parts.slice(0, -1).join('/');
+        const depth = parts.length - 1;
+
+        // Convert markdown to HTML
+        console.log(`[Logseq Import] Processing: ${fileName}`);
+        console.log(`  → pageName: "${pageName}"`);
+        console.log(`  → namespace: "${namespace}"`);
+        console.log(`  → slug: "${slug}"`);
+        console.log(`  → depth: ${depth}`);
+
+        const parsedHtml = await markdownToHtml(markdownContent);
+
+        console.log(`  → HTML length: ${parsedHtml.length} chars`);
+
         // Check if page exists
         const existing = await db.query.nodes.findFirst({
           where: and(
             eq(nodes.planet_id, workspace.id),
-            eq(nodes.page_name, page.pageName)
+            eq(nodes.page_name, pageName)
           ),
         });
 
         const nodeData = {
           planet_id: workspace.id,
-          page_name: page.pageName,
-          namespace: page.namespace,
-          slug: page.slug,
-          title: page.pageName.split('/').pop() || page.pageName,
-          type: 'file',
-          depth: page.namespace.split('/').filter(Boolean).length,
+          page_name: pageName,
+          namespace,
+          slug,
+          title: frontmatter.title || parts[parts.length - 1],
+          type: 'file' as const,
+          depth,
+          file_path: fileName,
 
-          // Pre-rendered HTML from Rust tool (NEW way)
-          parsed_html: page.html,
+          // Store the rendered HTML
+          parsed_html: parsedHtml,
 
-          // Explicitly clear deprecated content field
-          content: null,
-
-          // Metadata from export
+          // Metadata from frontmatter
           metadata: {
-            ...page.metadata,
-            export_date: new Date().toISOString(),
-            rust_tool_used: true, // Mark that this was processed by Rust tool
+            ...frontmatter,
+            ingestion_date: new Date().toISOString(),
+            original_filename: file.name,
           },
 
-          source_folder: page.pageName.startsWith('journals/') ? 'journals' : 'pages',
-          is_journal: page.pageName.startsWith('journals/'),
+          source_folder: sourceFolder,
+          is_journal: isJournal,
 
           updated_at: new Date(),
         };
@@ -157,7 +163,7 @@ export async function POST(req: NextRequest) {
             .set(nodeData)
             .where(eq(nodes.id, existing.id));
           updated++;
-          console.log(`[Logseq Import] Updated: ${page.pageName}`);
+          console.log(`  ✓ Updated: ${pageName}`);
         } else {
           // Create new
           await db.insert(nodes).values({
@@ -165,22 +171,22 @@ export async function POST(req: NextRequest) {
             created_at: new Date(),
           });
           created++;
-          console.log(`[Logseq Import] Created: ${page.pageName}`);
+          console.log(`  ✓ Created: ${pageName}`);
         }
-      } catch (err) {
-        console.error(`[Logseq Import] Failed to import ${page.pageName}:`, err);
+      } catch (err: any) {
+        console.error(`[Logseq Import] Failed to process ${file.name}:`, err.message);
         skipped++;
       }
     }
 
-    // 7. Create virtual folder nodes
+    // 5. Create virtual folder nodes
     await createLogseqFolders(workspace.id);
 
-    // 8. Invalidate cache
+    // 6. Invalidate cache
     revalidateTag(`planet-${workspace.id}`);
 
-    // 9. Cleanup
-    await fs.rm(tempDir, { recursive: true, force: true });
+    const duration = Date.now() - startTime;
+    console.log(`[Logseq Import] Complete in ${duration}ms: ${created} created, ${updated} updated, ${skipped} skipped`);
 
     return NextResponse.json({
       success: true,
@@ -188,23 +194,20 @@ export async function POST(req: NextRequest) {
         created,
         updated,
         skipped,
-        total: exportResult.pages.length,
-        duration: exportResult.stats.duration,
+        total: files.length,
+        duration,
       },
     });
 
   } catch (error: any) {
     console.error('[Logseq Import] IMPORT FAILED');
-    console.error('[Logseq Import] Error type:', error.constructor.name);
-    console.error('[Logseq Import] Error message:', error.message);
-    console.error('[Logseq Import] Stack trace:', error.stack);
+    console.error('[Logseq Import] Error:', error.message);
+    console.error('[Logseq Import] Stack:', error.stack);
 
     return NextResponse.json(
       {
         error: 'Import failed',
         details: error.message,
-        errorType: error.constructor.name,
-        hint: 'Check server logs for detailed error information. Ensure export-logseq-notes is installed.',
       },
       { status: 500 }
     );

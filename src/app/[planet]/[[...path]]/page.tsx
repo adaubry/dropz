@@ -265,10 +265,10 @@ export default async function DynamicPage({
                   Content Not Available
                 </h3>
                 <p className="text-yellow-700 dark:text-yellow-300 mb-4">
-                  This Logseq page has not been properly ingested. Please re-upload your Logseq graph.
+                  This Logseq page has no content. Please re-upload your Logseq graph.
                 </p>
                 <p className="text-sm text-yellow-600 dark:text-yellow-400">
-                  Logseq pages require the Rust export tool to generate pre-rendered HTML.
+                  The markdown file may be empty or failed to process during ingestion.
                 </p>
               </div>
             </div>

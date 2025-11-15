@@ -1,13 +1,17 @@
 // Rhai script for export-logseq-notes
-// This script processes each page before export
-// Required by the export-logseq-notes tool
+// This script processes and selects pages for export
 
-// For now, this is a pass-through script
-// It receives each page and can modify it before export
-// Future enhancements: custom processing, filtering, transformation
+// Main function called by export-logseq-notes
+// Returns an array of pages to export
+fn main(pages) {
+    let selected = [];
 
-fn process_page(page) {
-    // Pass through unmodified
-    // The page object contains: title, slug, body, etc.
-    page
+    // Process all pages - select everything for Dropz
+    for page in pages {
+        // Include all pages (no filtering)
+        // The page object will be processed by the template
+        selected.push(page);
+    }
+
+    selected
 }
