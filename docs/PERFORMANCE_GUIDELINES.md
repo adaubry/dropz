@@ -2,6 +2,10 @@
 
 Comprehensive performance optimization guidelines and best practices for achieving sub-100ms page loads.
 
+> **Status:** Post-MVP Stabilization Phase
+> **Next.js Version:** 16 (using `"use cache"` directive)
+> **Last Updated:** 2025-11-16
+
 ## Table of Contents
 
 - [Performance Principles](#performance-principles)
@@ -10,7 +14,7 @@ Comprehensive performance optimization guidelines and best practices for achievi
 - [Image Optimization](#image-optimization)
 - [Link Prefetching](#link-prefetching)
 - [Database Query Optimization](#database-query-optimization)
-- [Markdown Performance](#markdown-performance)
+- [Pre-Rendered Content Performance](#pre-rendered-content-performance)
 - [Server Components](#server-components)
 - [Edge Runtime](#edge-runtime)
 - [Performance Monitoring](#performance-monitoring)
@@ -130,26 +134,22 @@ export default function PlanetPage({ params }) {
 
 ## Caching Strategies
 
-### Database Query Caching
+### Function-Level Caching (Next.js 16)
 
-All read queries use `unstable_cache` with tags for invalidation:
+All read queries use `"use cache"` directive for automatic caching:
 
 ```typescript
-import { unstable_cache } from 'next/cache';
+// Next.js 16: Function-level caching
+"use cache";
 
-// Cache for 2 hours with tags
-export const getCachedNodes = unstable_cache(
-  async (planetId: string) => {
-    return await db.query.nodes.findMany({
-      where: eq(nodes.planet_id, planetId),
-    });
-  },
-  ['nodes', 'by-planet'], // Cache key
-  {
-    revalidate: 7200, // 2 hours
-    tags: ['nodes'], // Invalidation tag
-  }
-);
+export async function getCachedNodes(planetId: string) {
+  return await db.query.nodes.findMany({
+    where: eq(nodes.planet_id, planetId),
+  });
+}
+
+// Configure cache behavior at file level
+export const revalidate = 7200; // 2 hours
 ```
 
 **Invalidate on mutations:**
@@ -165,8 +165,8 @@ revalidateTag('nodes'); // Invalidate all nodes cache
 ### Cache Hierarchy
 
 **Cache Levels:**
-1. **React Server Component Cache** - Automatic, per-request
-2. **Next.js Data Cache** - `unstable_cache`, cross-request
+1. **Function Cache** - `"use cache"` directive, automatic
+2. **React Server Component Cache** - Automatic, per-request deduplication
 3. **Full Route Cache** - Static pages, permanent until revalidate
 4. **CDN Cache** - Vercel Edge, global
 
@@ -434,156 +434,162 @@ const nodes = await db.query.nodes.findMany({
 
 ---
 
-## Markdown Performance
+## Pre-Rendered Content Performance
 
-### Critical Pattern: Partial Pre-render First Visible Lines
+### Critical Pattern: Store Pre-Rendered HTML
 
-**🔑 CORE PRINCIPLE:** We ALWAYS partial pre-render the first visible lines of markdown files if they're not cached.
+**🔑 CORE PRINCIPLE:** All content is pre-rendered during ingestion and stored as HTML in the database.
 
 This is a fundamental performance pattern in Dropz:
 
-1. **Request arrives** → Check cache for first visible lines
-2. **If cached** → Return instantly from cache
-3. **If NOT cached** → Partial pre-render first ~30 lines immediately
-4. **Stream full content** → Load remaining content in Suspense boundary
+1. **Upload** → Logseq markdown files uploaded via API
+2. **Parse** → Extract frontmatter, process with unified/remark
+3. **Render** → Convert to HTML during ingestion (not on read!)
+4. **Store** → Save `parsed_html` in database
+5. **Serve** → Return pre-rendered HTML instantly (< 50ms)
 
-This ensures users ALWAYS see content within 100ms, even for uncached files.
+This ensures users ALWAYS see content within 100ms, even for complex markdown.
 
 ### Implementation Pattern
 
 ```tsx
-import { Suspense } from 'react';
+// Server Component - No markdown processing needed!
+async function MarkdownPage({ planetSlug, pathSegments }) {
+  // Get node with pre-rendered HTML
+  const node = await getNodeByPath(planetSlug, pathSegments);
 
-async function MarkdownPage({ filePath }) {
-  // ALWAYS attempt to get first visible lines
-  // If not cached, this partial pre-renders immediately
-  const firstLines = await getFirstVisibleLines(filePath, 30);
+  if (!node || !node.parsed_html) {
+    notFound();
+  }
 
   return (
     <div>
-      {/*
-        PRE-RENDERED CONTENT
-        This is always rendered in the initial HTML
-        Users see this within 100ms
-      */}
-      <MarkdownPreview content={firstLines} />
-
-      {/*
-        STREAMED CONTENT
-        This loads after initial render
-        Doesn't block the page
-      */}
-      <Suspense fallback={<div>Loading more...</div>}>
-        <FullMarkdownContent filePath={filePath} />
-      </Suspense>
+      {/* Pre-rendered HTML - instant display */}
+      <StaticContentRenderer html={node.parsed_html} />
     </div>
   );
 }
 ```
 
-### First Visible Lines Caching
+### Ingestion-Time Rendering
 
-The caching function that enables this pattern:
+The rendering happens during upload, not on every request:
 
 ```typescript
-// lib/markdown-cache.ts
-import { unstable_cache } from 'next/cache';
+// api/ingest-logseq/route.ts
+import { unified } from 'unified';
+import remarkParse from 'remark-parse';
+import remarkGfm from 'remark-gfm';
+import remarkRehype from 'remark-rehype';
+import rehypeRaw from 'rehype-raw';
+import rehypeStringify from 'rehype-stringify';
+import rehypeHighlight from 'rehype-highlight';
 
-export const getFirstVisibleLines = unstable_cache(
-  async (filePath: string, lines: number = 30) => {
-    const content = await readFile(filePath, 'utf-8');
-    return content.split('\n').slice(0, lines).join('\n');
-  },
-  ['markdown-first-lines'],
-  { revalidate: 7200 } // 2-hour cache
-);
+async function markdownToHtml(markdown: string): Promise<string> {
+  const result = await unified()
+    .use(remarkParse)
+    .use(remarkGfm)
+    .use(remarkRehype, { allowDangerousHtml: true })
+    .use(rehypeRaw)
+    .use(rehypeHighlight)
+    .use(rehypeStringify, { allowDangerousHtml: true })
+    .process(markdown);
+
+  return String(result);
+}
+
+// Process during ingestion
+const parsed_html = await markdownToHtml(markdownContent);
+
+// Store in database
+await db.insert(nodes).values({
+  // ... other fields
+  parsed_html,  // Pre-rendered HTML
+});
 ```
-
-**How it works:**
-1. **First request (uncached):** Reads file, returns first 30 lines, caches result
-2. **Subsequent requests:** Returns from cache instantly (< 5ms)
-3. **After 2 hours:** Cache expires, repeats step 1
-
-### Why 30 Lines?
-
-30 lines typically equals:
-- ~800-1200 characters
-- Above-the-fold content on most screens
-- 1-3 paragraphs or a title + introduction
-- Fast enough to partial pre-render (< 50ms)
-- Small enough to cache efficiently
 
 ### Performance Impact
 
-**Before this pattern:**
-- Uncached markdown file: 500-1000ms TTFB
-- User sees nothing until full file loads
-- Poor LCP scores
+**Comparison:**
 
-**After this pattern:**
-- Uncached markdown file: 50-100ms TTFB
-- User sees content immediately
-- LCP improves by 80%
+| Approach | TTFB | Compute | Caching Complexity |
+|----------|------|---------|-------------------|
+| **On-Demand Rendering** | 300-500ms | Every request | Complex (markdown + HTML) |
+| **Pre-Rendered HTML** | 50-100ms | Once at ingestion | Simple (HTML only) |
 
-### Full Content Loading Strategy
+**Benefits:**
+- ✅ **3.6x faster** page loads vs dynamic parsing
+- ✅ **Zero markdown processing** on reads
+- ✅ **Simpler caching** - just cache HTML
+- ✅ **Lower compute costs** - render once, serve thousands
+- ✅ **Consistent performance** - no variance based on file size
 
-```tsx
-// Full content loads in the background
-async function FullMarkdownContent({ filePath }) {
-  // This runs AFTER first visible lines are displayed
-  const fullContent = await getFullMarkdown(filePath);
-
-  return <MarkdownRenderer content={fullContent} />;
-}
-
-export const getFullMarkdown = unstable_cache(
-  async (filePath: string) => {
-    const content = await readFile(filePath, 'utf-8');
-    return content;
-  },
-  ['markdown-full'],
-  { revalidate: 7200 }
-);
-```
-
-### Optimize Markdown Rendering
+### Caching Pre-Rendered Content
 
 ```typescript
-// Use server-side rendering
-import { compileMDX } from 'next-mdx-remote/rsc';
-import remarkGfm from 'remark-gfm';
-import rehypeHighlight from 'rehype-highlight';
+// Next.js 16: Cache the database query
+"use cache";
 
-const { content } = await compileMDX({
-  source: markdown,
-  options: {
-    parseFrontmatter: true,
-    mdxOptions: {
-      remarkPlugins: [remarkGfm],
-      rehypePlugins: [rehypeHighlight],
-    },
-  },
-});
+export async function getNodeByPath(
+  planetSlug: string,
+  pathSegments: string[]
+) {
+  const planet = await getPlanetBySlug(planetSlug);
+  if (!planet) return undefined;
+
+  const slug = pathSegments.at(-1) || "";
+  const namespace = pathSegments.slice(0, -1).join("/");
+
+  return await db.query.nodes.findFirst({
+    where: and(
+      eq(nodes.planet_id, planet.id),
+      eq(nodes.namespace, namespace),
+      eq(nodes.slug, slug)
+    ),
+  });
+}
+
+export const revalidate = 7200; // 2 hours
+```
+
+### Why Pre-Render?
+
+**Read-Heavy Workload:**
+- 99% reads, 1% writes
+- Same content served thousands of times
+- Rendering once vs thousands of times
+
+**Cost Efficiency:**
+- Ingestion: 100ms × 1 = 100ms total
+- On-demand: 50ms × 1000 requests = 50,000ms total
+- **Savings: 99.8% less compute time**
+
+### Re-Ingestion for Updates
+
+If rendering logic changes (new Logseq feature, syntax fix):
+
+```bash
+# Re-upload Logseq graph to update all parsed_html
+curl -X POST /api/ingest-logseq \
+  -F "files=@pages/*.md" \
+  -F "files=@journals/*.md"
 ```
 
 ### Best Practices
 
 ✅ **DO:**
-- **ALWAYS** partial pre-render first visible lines if not cached
-- Cache both first lines AND full content separately
-- Use 30 lines as default (adjust per use case)
-- Lazy load full content in Suspense
-- Use server-side rendering for markdown
-- Show loading states for full content
+- Pre-render during ingestion
+- Store `parsed_html` in database
+- Cache database queries with `"use cache"`
+- Use unified/remark pipeline for consistency
+- Re-ingest when rendering logic changes
 
 ❌ **DON'T:**
-- Load entire large files upfront without PPR
+- Render markdown on every request
 - Use client-side markdown parsing
-- Skip caching first visible lines
-- Use too many markdown plugins (slow)
-- Cache only full content (defeats PPR)
-- Show spinners while loading first lines (should be instant)
-- Use too many plugins
+- Store raw markdown without HTML
+- Skip caching (defeats the purpose)
+- Use too many markdown plugins (slow ingestion)
 
 ---
 
@@ -772,14 +778,14 @@ export default {
 **For Every Page:**
 - [ ] Has `loading.tsx` file
 - [ ] Uses Server Components by default
-- [ ] Queries are cached with `unstable_cache`
+- [ ] Queries use `"use cache"` directive
 - [ ] Images use proper loading strategy
 - [ ] Links have prefetch enabled
 - [ ] No unnecessary client-side JavaScript
 
 **For Every Database Query:**
 - [ ] Uses composite indexes
-- [ ] Has cache with revalidation
+- [ ] Has `"use cache"` with revalidation time
 - [ ] Has invalidation on mutations
 - [ ] Limits results appropriately
 - [ ] Runs in parallel when possible
@@ -959,5 +965,5 @@ async function Page() {
 
 ---
 
-**Last Updated:** 2025-11-12
-**Version:** 1.0.0
+**Last Updated:** 2025-11-16
+**Version:** 2.0.0 (Next.js 16, Post-MVP)

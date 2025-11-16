@@ -2,6 +2,10 @@
 
 Modern conventions and best practices for Create, Read, Update, Delete operations in this codebase.
 
+> **Status:** Post-MVP Stabilization Phase
+> **Next.js Version:** 16 (using `"use cache"` directive)
+> **Last Updated:** 2025-11-16
+
 ## Table of Contents
 
 - [Architecture Overview](#architecture-overview)
@@ -23,21 +27,22 @@ Modern conventions and best practices for Create, Read, Update, Delete operation
 ```
 src/lib/queries.ts          ← Single source of truth for all queries
 src/db/schema.ts            ← Database schema definitions
-src/app/api/*/route.ts      ← API endpoints (mutations only)
+src/app/api/*/route.ts      ← API endpoints (client interactions)
+src/app/(login)/actions.ts  ← Server Actions (auth mutations)
 drizzle/                    ← Migrations
 ```
 
-**Key Principle:** All database reads go through `queries.ts`, all mutations through API routes.
+**Key Principle:** All database reads go through `queries.ts`, mutations through Server Actions or API routes.
 
 ### Database Schema
 
 **Core Tables:**
 - `users` - User accounts
 - `planets` - Top-level workspaces (one per user)
-- `nodes` - Unified content (folders and files)
-- `nodeLinks` - Bidirectional node relationships
-- `editingSessions` - Track editing mode
-- `nodeBackups` - Backup snapshots for undo
+- `nodes` - Unified content (Logseq pages + virtual folders)
+- `nodeLinks` - Bidirectional page/block references
+- `editingSessions` - Track editing mode sessions
+- `nodeBackups` - Backup snapshots for undo/restore
 
 ---
 
@@ -65,17 +70,21 @@ const MyComponent = async () => {
 }
 ```
 
-### 2. Namespace-Based Hierarchy
-✅ **DO:** Use namespace strings for flexible hierarchy
+### 2. Virtual Namespace Hierarchy (Logseq Paradigm)
+✅ **DO:** Use `page_name` for Logseq pages, `namespace` for virtual hierarchy
 ❌ **DON'T:** Use parent_id foreign keys (inflexible, slow)
 
 ```typescript
-// ✅ GOOD - Namespace approach (supports ANY depth)
+// ✅ GOOD - Logseq page approach (flat storage, virtual hierarchy)
 {
-  namespace: "courses/cs101/week1/lectures",  // Any depth
-  slug: "intro-to-algorithms",
-  depth: 4
+  page_name: "guides/setup/intro",      // Full Logseq page name
+  namespace: "guides/setup",             // Extracted parent path
+  slug: "intro",                         // Leaf name
+  depth: 2,                              // Calculated from namespace
+  type: "file"                           // All pages are files
 }
+
+// Logseq file convention: pages/guides___setup___intro.md → page_name: "guides/setup/intro"
 
 // ❌ BAD - Parent ID approach (rigid, requires recursive queries)
 {
@@ -120,12 +129,17 @@ await db.update(nodes).set({ ... }); // Untracked changes!
 ❌ **DON'T:** Skip caching or use stale data
 
 ```typescript
-// ✅ GOOD - Cached query
-export const getCachedNodes = unstable_cache(
-  async (planetId: string) => getNodes(planetId),
-  ["nodes", "by-planet"],
-  { revalidate: 7200, tags: ["nodes"] }
-);
+// ✅ GOOD - Cached query (Next.js 16)
+"use cache";
+
+export async function getCachedNodes(planetId: string) {
+  return await db.query.nodes.findMany({
+    where: eq(nodes.planet_id, planetId),
+  });
+}
+
+// Configure cache behavior
+export const revalidate = 7200; // 2 hours
 
 // Then invalidate on mutation
 await db.update(nodes).set({ ... });
@@ -138,78 +152,106 @@ revalidateTag("nodes");
 
 ### Modern Conventions
 
-1. **Upsert Pattern** - Prefer upsert over separate insert/update logic
-2. **Frontmatter Extraction** - Parse metadata from markdown files
+1. **Idempotent Upsert** - Check exists before insert/update
+2. **Pre-rendered Content** - Store `parsed_html` from Rust export tool
 3. **Automatic Fields** - Set `created_at`, `updated_at`, `depth` automatically
-4. **Session Required** - All creates require active editing session
-5. **Backup Creation** - Create backup even for new nodes (for rollback)
+4. **Namespace Extraction** - Extract from `page_name` or file path
+5. **Logseq Compatibility** - Handle `___` file naming convention
 
-### Example: Creating a Node
+### Example: Logseq Graph Ingestion
 
-**API Endpoint:** `POST /api/nodes`
+**API Endpoint:** `POST /api/ingest-logseq`
 
 ```typescript
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   // 1. Authentication
   const user = await getUser();
   if (!user) {
-    return Response.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  // 2. Parse request
-  const { planet_id, namespace, slug, content, type } = await req.json();
-
-  // 3. Validate editing session
-  const session = await getActiveEditingSession(user.id, planet_id);
-  if (!session) {
-    return Response.json({ error: "No active editing session" }, { status: 403 });
+  // 2. Get user's workspace
+  const workspace = await getUserWorkspace(user.id);
+  if (!workspace) {
+    return NextResponse.json({ error: 'No workspace found' }, { status: 404 });
   }
 
-  // 4. Extract frontmatter
-  const { frontmatter, contentWithoutFrontmatter } = extractFrontmatter(content);
+  // 3. Get uploaded files
+  const formData = await req.formData();
+  const files = formData.getAll('files') as File[];
 
-  // 5. Calculate depth
-  const depth = namespace ? namespace.split('/').length : 0;
+  // 4. Process each markdown file
+  for (const file of files) {
+    if (!file.name.endsWith('.md')) continue;
 
-  // 6. Upsert node (create or update if exists)
-  const [node] = await db
-    .insert(nodes)
-    .values({
-      planet_id,
-      namespace,
-      slug,
-      title: frontmatter.title || slug,
-      content: contentWithoutFrontmatter,
-      type,
-      depth,
-      metadata: frontmatter,
-      created_at: new Date(),
-      updated_at: new Date(),
-    })
-    .onConflictDoUpdate({
-      target: [nodes.planet_id, nodes.namespace, nodes.slug],
-      set: {
-        content: contentWithoutFrontmatter,
+    // Read file content
+    const buffer = Buffer.from(await file.arrayBuffer());
+    const content = buffer.toString('utf-8');
+
+    // Parse frontmatter
+    const { data: frontmatter, content: markdownContent } = matter(content);
+
+    // Determine if journal page
+    const isJournal = /^\d{4}_\d{2}_\d{2}\.md$/.test(file.name);
+
+    // Extract page_name from Logseq file naming
+    // pages/guides___setup___intro.md → "guides/setup/intro"
+    const fileName = file.name.split('/').pop()!.replace('.md', '');
+    const pageName = isJournal
+      ? fileName.replace(/_/g, '-')  // 2025_11_16 → 2025-11-16
+      : fileName.replace(/___/g, '/'); // guides___setup → guides/setup
+
+    // Extract namespace and slug
+    const segments = pageName.split('/');
+    const slug = segments[segments.length - 1];
+    const namespace = segments.slice(0, -1).join('/');
+    const depth = namespace ? namespace.split('/').length : 0;
+
+    // Convert markdown to HTML (unified pipeline)
+    const parsed_html = await markdownToHtml(markdownContent);
+
+    // 5. Idempotent upsert
+    const existing = await db.query.nodes.findFirst({
+      where: and(
+        eq(nodes.planet_id, workspace.id),
+        eq(nodes.page_name, pageName)
+      )
+    });
+
+    if (existing) {
+      // Update existing node
+      await db.update(nodes)
+        .set({
+          parsed_html,
+          title: frontmatter.title || slug,
+          metadata: frontmatter,
+          updated_at: new Date(),
+        })
+        .where(eq(nodes.id, existing.id));
+    } else {
+      // Insert new node
+      await db.insert(nodes).values({
+        planet_id: workspace.id,
+        page_name: pageName,
+        namespace,
+        slug,
         title: frontmatter.title || slug,
+        parsed_html,
+        type: 'file',
+        depth,
+        is_journal: isJournal,
+        journal_date: isJournal ? new Date(pageName) : null,
+        source_folder: isJournal ? 'journals' : 'pages',
         metadata: frontmatter,
-        updated_at: new Date(),
-      },
-    })
-    .returning();
+        file_path: file.name,
+      });
+    }
+  }
 
-  // 7. Create backup
-  await db.insert(nodeBackups).values({
-    node_id: node.id,
-    planet_id,
-    session_id: session.id,
-    original_data: JSON.stringify(node),
-    created_at: new Date(),
-  });
+  // 6. Invalidate cache
+  revalidateTag(`planet-${workspace.id}`);
 
-  // 8. Invalidate cache
-  revalidateTag(`planet-${planet_id}`);
-
-  return Response.json(node);
+  return NextResponse.json({ success: true });
 }
 ```
 
@@ -217,18 +259,27 @@ export async function POST(req: Request) {
 
 **Required Fields:**
 - `planet_id` - Must be a valid planet ID the user owns
-- `slug` - Must be lowercase, alphanumeric + hyphens
-- `type` - Must be 'file' or 'folder'
+- `page_name` - Logseq page identifier (e.g., "guides/setup")
+- `slug` - Extracted from page_name
+- `parsed_html` - Pre-rendered HTML content
 
 **Optional Fields:**
-- `namespace` - Defaults to empty string (root level)
-- `content` - Defaults to empty string
+- `namespace` - Extracted from page_name (defaults to "")
+- `is_journal` - Boolean, true for journal pages
+- `journal_date` - Date for journal pages
 - `metadata` - Extracted from frontmatter
 
-**Slug Validation:**
+**Page Name Validation:**
 ```typescript
-function validateSlug(slug: string): boolean {
-  return /^[a-z0-9-]+$/.test(slug);
+// Logseq page_name convention: hierarchical with /
+// Example: "guides/setup/intro"
+function extractNamespaceAndSlug(pageName: string) {
+  const segments = pageName.split('/');
+  return {
+    slug: segments[segments.length - 1],
+    namespace: segments.slice(0, -1).join('/'),
+    depth: segments.length - 1
+  };
 }
 ```
 
@@ -332,12 +383,17 @@ export async function getNodeBreadcrumbs(node: Node): Promise<Breadcrumb[]> {
 ### Caching Strategy
 
 ```typescript
-// 2-hour cache for stable data
-export const getCachedPlanets = unstable_cache(
-  getPlanets,
-  ["planets"],
-  { revalidate: 7200, tags: ["planets"] }
-);
+// Next.js 16: Use "use cache" directive
+"use cache";
+
+export async function getCachedPlanets() {
+  return await db.query.planets.findMany({
+    orderBy: (planets, { asc }) => [asc(planets.created_at)],
+  });
+}
+
+// Configure cache behavior at file level
+export const revalidate = 7200; // 2 hours
 
 // Invalidate on mutation
 await db.update(nodes).set({ ... });
@@ -626,8 +682,8 @@ export async function POST(req: Request) {
 
 ### Cache Levels
 
-1. **Database Query Cache** - `unstable_cache` wrapper
-2. **React Server Component Cache** - Automatic in Next.js 15
+1. **Function Cache** - `"use cache"` directive (Next.js 16)
+2. **React Server Component Cache** - Automatic per-request deduplication
 3. **Partial Pre-rendering (PPR)** - Static shell + dynamic content
 4. **CDN Cache** - Vercel Edge Network
 
@@ -841,5 +897,5 @@ WHERE planet_id = ?
 
 ---
 
-**Last Updated:** 2025-11-12
-**Version:** 1.0.0
+**Last Updated:** 2025-11-16
+**Version:** 2.0.0 (Next.js 16, Post-MVP)
